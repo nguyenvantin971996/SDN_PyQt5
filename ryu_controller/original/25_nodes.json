@@ -1,0 +1,1797 @@
+{
+    "controllers": [
+        {
+            "nameClass": "Controller",
+            "name": "C1",
+            "id": 1,
+            "ip": "127.0.0.1",
+            "port": 6653,
+            "center": [
+                509,
+                116
+            ],
+            "script": "/home/tin/SDN_PyQt5/ryu_controller/ryu_WCMP.py"
+        }
+    ],
+    "switches": [
+        {
+            "nameClass": "Switch",
+            "name": "S1",
+            "id": 1,
+            "center": [
+                173,
+                542
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S2",
+            "id": 2,
+            "center": [
+                328,
+                256
+            ],
+            "numberPorts": 3
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S3",
+            "id": 3,
+            "center": [
+                593,
+                256
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S4",
+            "id": 4,
+            "center": [
+                883,
+                256
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S5",
+            "id": 5,
+            "center": [
+                1181,
+                256
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S6",
+            "id": 6,
+            "center": [
+                1488,
+                256
+            ],
+            "numberPorts": 3
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S7",
+            "id": 7,
+            "center": [
+                331,
+                842
+            ],
+            "numberPorts": 3
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S8",
+            "id": 8,
+            "center": [
+                596,
+                842
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S9",
+            "id": 9,
+            "center": [
+                886,
+                842
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S10",
+            "id": 10,
+            "center": [
+                1184,
+                842
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S11",
+            "id": 11,
+            "center": [
+                1488,
+                842
+            ],
+            "numberPorts": 3
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S12",
+            "id": 12,
+            "center": [
+                461,
+                402
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S13",
+            "id": 13,
+            "center": [
+                746,
+                402
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S14",
+            "id": 14,
+            "center": [
+                1027,
+                402
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S15",
+            "id": 15,
+            "center": [
+                1333,
+                402
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S16",
+            "id": 16,
+            "center": [
+                461,
+                688
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S17",
+            "id": 17,
+            "center": [
+                746,
+                688
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S18",
+            "id": 18,
+            "center": [
+                1027,
+                688
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S19",
+            "id": 19,
+            "center": [
+                1333,
+                688
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S20",
+            "id": 20,
+            "center": [
+                328,
+                542
+            ],
+            "numberPorts": 3
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S21",
+            "id": 21,
+            "center": [
+                593,
+                542
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S22",
+            "id": 22,
+            "center": [
+                883,
+                542
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S23",
+            "id": 23,
+            "center": [
+                1181,
+                542
+            ],
+            "numberPorts": 4
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S24",
+            "id": 24,
+            "center": [
+                1488,
+                542
+            ],
+            "numberPorts": 3
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S25",
+            "id": 25,
+            "center": [
+                1656,
+                542
+            ],
+            "numberPorts": 4
+        }
+    ],
+    "hosts": [
+        {
+            "nameClass": "Host",
+            "name": "H1",
+            "id": 1,
+            "ip": "10.0.0.1",
+            "mac": "00:00:00:00:00:01",
+            "numberPorts": 1,
+            "center": [
+                176,
+                842
+            ],
+            "server": 0,
+            "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 100 -i 1 -u -b 1M -P 4 &\nwait"
+        },
+        {
+            "nameClass": "Host",
+            "name": "H2",
+            "id": 2,
+            "ip": "10.0.0.2",
+            "mac": "00:00:00:00:00:02",
+            "numberPorts": 1,
+            "center": [
+                1659,
+                842
+            ],
+            "server": 1,
+            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 &\nwait"
+        }
+    ],
+    "links": [
+        {
+            "id": 1,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S1",
+                "id": 1,
+                "center": [
+                    173,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S2",
+                "id": 2,
+                "center": [
+                    328,
+                    256
+                ],
+                "numberPorts": 3
+            },
+            "port": [
+                1,
+                1
+            ],
+            "bw": 100,
+            "delay": 90,
+            "loss": 0,
+            "cost": 5.0
+        },
+        {
+            "id": 2,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S2",
+                "id": 2,
+                "center": [
+                    328,
+                    256
+                ],
+                "numberPorts": 3
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S3",
+                "id": 3,
+                "center": [
+                    593,
+                    256
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 20,
+            "loss": 0,
+            "cost": 1.3
+        },
+        {
+            "id": 3,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S3",
+                "id": 3,
+                "center": [
+                    593,
+                    256
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S4",
+                "id": 4,
+                "center": [
+                    883,
+                    256
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 40,
+            "loss": 0,
+            "cost": 1.1
+        },
+        {
+            "id": 4,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S4",
+                "id": 4,
+                "center": [
+                    883,
+                    256
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S5",
+                "id": 5,
+                "center": [
+                    1181,
+                    256
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 80,
+            "loss": 0,
+            "cost": 3.3
+        },
+        {
+            "id": 5,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S5",
+                "id": 5,
+                "center": [
+                    1181,
+                    256
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S6",
+                "id": 6,
+                "center": [
+                    1488,
+                    256
+                ],
+                "numberPorts": 3
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 70,
+            "loss": 0,
+            "cost": 1.0
+        },
+        {
+            "id": 6,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S6",
+                "id": 6,
+                "center": [
+                    1488,
+                    256
+                ],
+                "numberPorts": 3
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S25",
+                "id": 25,
+                "center": [
+                    1656,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 10,
+            "loss": 0,
+            "cost": 2.5
+        },
+        {
+            "id": 7,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S25",
+                "id": 25,
+                "center": [
+                    1656,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S11",
+                "id": 11,
+                "center": [
+                    1488,
+                    842
+                ],
+                "numberPorts": 3
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 10,
+            "loss": 0,
+            "cost": 1.3
+        },
+        {
+            "id": 8,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S11",
+                "id": 11,
+                "center": [
+                    1488,
+                    842
+                ],
+                "numberPorts": 3
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S10",
+                "id": 10,
+                "center": [
+                    1184,
+                    842
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 30,
+            "loss": 0,
+            "cost": 2.5
+        },
+        {
+            "id": 9,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S10",
+                "id": 10,
+                "center": [
+                    1184,
+                    842
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S9",
+                "id": 9,
+                "center": [
+                    886,
+                    842
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 60,
+            "loss": 0,
+            "cost": 1.1
+        },
+        {
+            "id": 10,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S9",
+                "id": 9,
+                "center": [
+                    886,
+                    842
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S8",
+                "id": 8,
+                "center": [
+                    596,
+                    842
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 70,
+            "loss": 0,
+            "cost": 1.4
+        },
+        {
+            "id": 11,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S8",
+                "id": 8,
+                "center": [
+                    596,
+                    842
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S7",
+                "id": 7,
+                "center": [
+                    331,
+                    842
+                ],
+                "numberPorts": 3
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 40,
+            "loss": 0,
+            "cost": 2.5
+        },
+        {
+            "id": 12,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S1",
+                "id": 1,
+                "center": [
+                    173,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S7",
+                "id": 7,
+                "center": [
+                    331,
+                    842
+                ],
+                "numberPorts": 3
+            },
+            "port": [
+                2,
+                2
+            ],
+            "bw": 100,
+            "delay": 70,
+            "loss": 0,
+            "cost": 5.0
+        },
+        {
+            "id": 13,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S1",
+                "id": 1,
+                "center": [
+                    173,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S20",
+                "id": 20,
+                "center": [
+                    328,
+                    542
+                ],
+                "numberPorts": 3
+            },
+            "port": [
+                3,
+                1
+            ],
+            "bw": 100,
+            "delay": 50,
+            "loss": 0,
+            "cost": 2.0
+        },
+        {
+            "id": 14,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S20",
+                "id": 20,
+                "center": [
+                    328,
+                    542
+                ],
+                "numberPorts": 3
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S12",
+                "id": 12,
+                "center": [
+                    461,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 20,
+            "loss": 0,
+            "cost": 3.3
+        },
+        {
+            "id": 15,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S12",
+                "id": 12,
+                "center": [
+                    461,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S3",
+                "id": 3,
+                "center": [
+                    593,
+                    256
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                3
+            ],
+            "bw": 100,
+            "delay": 20,
+            "loss": 0,
+            "cost": 2.5
+        },
+        {
+            "id": 16,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S20",
+                "id": 20,
+                "center": [
+                    328,
+                    542
+                ],
+                "numberPorts": 3
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S16",
+                "id": 16,
+                "center": [
+                    461,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                3,
+                1
+            ],
+            "bw": 100,
+            "delay": 70,
+            "loss": 0,
+            "cost": 1.3
+        },
+        {
+            "id": 17,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S16",
+                "id": 16,
+                "center": [
+                    461,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S8",
+                "id": 8,
+                "center": [
+                    596,
+                    842
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                3
+            ],
+            "bw": 100,
+            "delay": 40,
+            "loss": 0,
+            "cost": 3.3
+        },
+        {
+            "id": 18,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S2",
+                "id": 2,
+                "center": [
+                    328,
+                    256
+                ],
+                "numberPorts": 3
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S12",
+                "id": 12,
+                "center": [
+                    461,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                3,
+                3
+            ],
+            "bw": 100,
+            "delay": 90,
+            "loss": 0,
+            "cost": 5.0
+        },
+        {
+            "id": 19,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S12",
+                "id": 12,
+                "center": [
+                    461,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S21",
+                "id": 21,
+                "center": [
+                    593,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                1
+            ],
+            "bw": 100,
+            "delay": 90,
+            "loss": 0,
+            "cost": 1.1
+        },
+        {
+            "id": 20,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S21",
+                "id": 21,
+                "center": [
+                    593,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S17",
+                "id": 17,
+                "center": [
+                    746,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 80,
+            "loss": 0,
+            "cost": 2.0
+        },
+        {
+            "id": 21,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S17",
+                "id": 17,
+                "center": [
+                    746,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S9",
+                "id": 9,
+                "center": [
+                    886,
+                    842
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                3
+            ],
+            "bw": 100,
+            "delay": 90,
+            "loss": 0,
+            "cost": 1.4
+        },
+        {
+            "id": 22,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S3",
+                "id": 3,
+                "center": [
+                    593,
+                    256
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S13",
+                "id": 13,
+                "center": [
+                    746,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                1
+            ],
+            "bw": 100,
+            "delay": 10,
+            "loss": 0,
+            "cost": 2.0
+        },
+        {
+            "id": 23,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S13",
+                "id": 13,
+                "center": [
+                    746,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S22",
+                "id": 22,
+                "center": [
+                    883,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 90,
+            "loss": 0,
+            "cost": 5.0
+        },
+        {
+            "id": 24,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S22",
+                "id": 22,
+                "center": [
+                    883,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S18",
+                "id": 18,
+                "center": [
+                    1027,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 40,
+            "loss": 0,
+            "cost": 1.0
+        },
+        {
+            "id": 25,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S18",
+                "id": 18,
+                "center": [
+                    1027,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S10",
+                "id": 10,
+                "center": [
+                    1184,
+                    842
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                3
+            ],
+            "bw": 100,
+            "delay": 90,
+            "loss": 0,
+            "cost": 1.1
+        },
+        {
+            "id": 26,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S4",
+                "id": 4,
+                "center": [
+                    883,
+                    256
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S14",
+                "id": 14,
+                "center": [
+                    1027,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                3,
+                1
+            ],
+            "bw": 100,
+            "delay": 90,
+            "loss": 0,
+            "cost": 1.7
+        },
+        {
+            "id": 27,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S14",
+                "id": 14,
+                "center": [
+                    1027,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S23",
+                "id": 23,
+                "center": [
+                    1181,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 60,
+            "loss": 0,
+            "cost": 2.0
+        },
+        {
+            "id": 28,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S23",
+                "id": 23,
+                "center": [
+                    1181,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S19",
+                "id": 19,
+                "center": [
+                    1333,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 30,
+            "loss": 0,
+            "cost": 2.5
+        },
+        {
+            "id": 29,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S19",
+                "id": 19,
+                "center": [
+                    1333,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S11",
+                "id": 11,
+                "center": [
+                    1488,
+                    842
+                ],
+                "numberPorts": 3
+            },
+            "port": [
+                2,
+                3
+            ],
+            "bw": 100,
+            "delay": 80,
+            "loss": 0,
+            "cost": 1.0
+        },
+        {
+            "id": 30,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S24",
+                "id": 24,
+                "center": [
+                    1488,
+                    542
+                ],
+                "numberPorts": 3
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S15",
+                "id": 15,
+                "center": [
+                    1333,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                1,
+                1
+            ],
+            "bw": 100,
+            "delay": 90,
+            "loss": 0,
+            "cost": 1.0
+        },
+        {
+            "id": 31,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S15",
+                "id": 15,
+                "center": [
+                    1333,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S5",
+                "id": 5,
+                "center": [
+                    1181,
+                    256
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                3
+            ],
+            "bw": 100,
+            "delay": 50,
+            "loss": 0,
+            "cost": 3.3
+        },
+        {
+            "id": 32,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S24",
+                "id": 24,
+                "center": [
+                    1488,
+                    542
+                ],
+                "numberPorts": 3
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S19",
+                "id": 19,
+                "center": [
+                    1333,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                2,
+                3
+            ],
+            "bw": 100,
+            "delay": 10,
+            "loss": 0,
+            "cost": 1.0
+        },
+        {
+            "id": 33,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S19",
+                "id": 19,
+                "center": [
+                    1333,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S10",
+                "id": 10,
+                "center": [
+                    1184,
+                    842
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                4
+            ],
+            "bw": 100,
+            "delay": 40,
+            "loss": 0,
+            "cost": 1.4
+        },
+        {
+            "id": 34,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S6",
+                "id": 6,
+                "center": [
+                    1488,
+                    256
+                ],
+                "numberPorts": 3
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S15",
+                "id": 15,
+                "center": [
+                    1333,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                3,
+                3
+            ],
+            "bw": 100,
+            "delay": 60,
+            "loss": 0,
+            "cost": 2.0
+        },
+        {
+            "id": 35,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S15",
+                "id": 15,
+                "center": [
+                    1333,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S23",
+                "id": 23,
+                "center": [
+                    1181,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                3
+            ],
+            "bw": 100,
+            "delay": 20,
+            "loss": 0,
+            "cost": 1.1
+        },
+        {
+            "id": 36,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S23",
+                "id": 23,
+                "center": [
+                    1181,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S18",
+                "id": 18,
+                "center": [
+                    1027,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                3
+            ],
+            "bw": 100,
+            "delay": 80,
+            "loss": 0,
+            "cost": 1.1
+        },
+        {
+            "id": 37,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S18",
+                "id": 18,
+                "center": [
+                    1027,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S9",
+                "id": 9,
+                "center": [
+                    886,
+                    842
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                4
+            ],
+            "bw": 100,
+            "delay": 20,
+            "loss": 0,
+            "cost": 3.3
+        },
+        {
+            "id": 38,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S5",
+                "id": 5,
+                "center": [
+                    1181,
+                    256
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S14",
+                "id": 14,
+                "center": [
+                    1027,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                3
+            ],
+            "bw": 100,
+            "delay": 10,
+            "loss": 0,
+            "cost": 1.3
+        },
+        {
+            "id": 39,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S14",
+                "id": 14,
+                "center": [
+                    1027,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S22",
+                "id": 22,
+                "center": [
+                    883,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                3
+            ],
+            "bw": 100,
+            "delay": 80,
+            "loss": 0,
+            "cost": 1.4
+        },
+        {
+            "id": 40,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S22",
+                "id": 22,
+                "center": [
+                    883,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S17",
+                "id": 17,
+                "center": [
+                    746,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                3
+            ],
+            "bw": 100,
+            "delay": 90,
+            "loss": 0,
+            "cost": 2.0
+        },
+        {
+            "id": 41,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S17",
+                "id": 17,
+                "center": [
+                    746,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S8",
+                "id": 8,
+                "center": [
+                    596,
+                    842
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                4
+            ],
+            "bw": 100,
+            "delay": 20,
+            "loss": 0,
+            "cost": 5.0
+        },
+        {
+            "id": 42,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S4",
+                "id": 4,
+                "center": [
+                    883,
+                    256
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S13",
+                "id": 13,
+                "center": [
+                    746,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                3
+            ],
+            "bw": 100,
+            "delay": 50,
+            "loss": 0,
+            "cost": 2.0
+        },
+        {
+            "id": 43,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S13",
+                "id": 13,
+                "center": [
+                    746,
+                    402
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S21",
+                "id": 21,
+                "center": [
+                    593,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                3
+            ],
+            "bw": 100,
+            "delay": 20,
+            "loss": 0,
+            "cost": 2.0
+        },
+        {
+            "id": 44,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S21",
+                "id": 21,
+                "center": [
+                    593,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S16",
+                "id": 16,
+                "center": [
+                    461,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                4,
+                3
+            ],
+            "bw": 100,
+            "delay": 40,
+            "loss": 0,
+            "cost": 2.5
+        },
+        {
+            "id": 45,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S16",
+                "id": 16,
+                "center": [
+                    461,
+                    688
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S7",
+                "id": 7,
+                "center": [
+                    331,
+                    842
+                ],
+                "numberPorts": 3
+            },
+            "port": [
+                4,
+                3
+            ],
+            "bw": 100,
+            "delay": 50,
+            "loss": 0,
+            "cost": 2.5
+        },
+        {
+            "id": 46,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S24",
+                "id": 24,
+                "center": [
+                    1488,
+                    542
+                ],
+                "numberPorts": 3
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S25",
+                "id": 25,
+                "center": [
+                    1656,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                3,
+                3
+            ],
+            "bw": 100,
+            "delay": 60,
+            "loss": 0,
+            "cost": 1.3
+        },
+        {
+            "id": 47,
+            "startNode": {
+                "nameClass": "Host",
+                "name": "H1",
+                "id": 1,
+                "ip": "10.0.0.1",
+                "mac": "00:00:00:00:00:01",
+                "numberPorts": 1,
+                "center": [
+                    176,
+                    842
+                ],
+                "server": 0,
+                "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 100 -i 1 -u -b 1M -P 4 &\nwait"
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S1",
+                "id": 1,
+                "center": [
+                    173,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                1,
+                4
+            ],
+            "bw": 1000,
+            "delay": 1,
+            "loss": 0,
+            "cost": 1.0
+        },
+        {
+            "id": 48,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S25",
+                "id": 25,
+                "center": [
+                    1656,
+                    542
+                ],
+                "numberPorts": 4
+            },
+            "endNode": {
+                "nameClass": "Host",
+                "name": "H2",
+                "id": 2,
+                "ip": "10.0.0.2",
+                "mac": "00:00:00:00:00:02",
+                "numberPorts": 1,
+                "center": [
+                    1659,
+                    842
+                ],
+                "server": 1,
+                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 &\nwait"
+            },
+            "port": [
+                4,
+                1
+            ],
+            "bw": 1000,
+            "delay": 1,
+            "loss": 0,
+            "cost": 1.0
+        }
+    ],
+    "labels": []
+}
