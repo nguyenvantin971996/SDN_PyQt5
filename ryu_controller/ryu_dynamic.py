@@ -85,15 +85,15 @@ class MultiPathRouting(app_manager.RyuApp):
         while True:
             hub.sleep(1)
             self.t += 1
-            if self.t > 20:
+            if self.t > 25:
                 for key, value in list(self.paths_dict.items()):
                     key_sum = key[-2] + '-->' + key[-1]
                     if key_sum not in self.sum_pw:
                         self.sum_pw[key_sum] = []
                     paths_pw = [self.compute_path_length(metric, path) for path in value[0]]
                     self.sum_pw[key_sum].append(sum(paths_pw))
-            if self.t == 40:
-                with open('/home/tin/SDN_PyQt5/result/FA.json', 'w') as f:
+            if self.t == 45:
+                with open('/home/tin/SDN_PyQt5/result/ACS.json', 'w') as f:
                     json.dump(self.sum_pw, f, indent=4)
         
     def compute_path_length(self, metric, path):
@@ -110,8 +110,8 @@ class MultiPathRouting(app_manager.RyuApp):
         # alg = ABC(self.port_monitor, self.paths_dict, key, K, 10, 100000, 20)
         # alg = BFA(self.port_monitor, self.paths_dict, key, K, 10, 100000, 0.7, 2, 2)
         # alg = AS(self.port_monitor, self.paths_dict, key, K, 10, 100000, 0.1, 1, 1, 0.5, 1)
-        # alg = ACS(self.port_monitor, self.paths_dict, key, K, 10, 100000, 0.1, 1, 1, 0.5, 1)
-        alg = FA(self.port_monitor, self.paths_dict, key, K, 10, 100000, 1, 1, 1, True)
+        alg = ACS(self.port_monitor, self.paths_dict, key, K, 10, 100000, 0.1, 1, 1, 0.5, 1)
+        # alg = FA(self.port_monitor, self.paths_dict, key, K, 10, 100000, 1, 1, 1, True)
         
         alg.compute_shortest_paths(time_limit)
 
