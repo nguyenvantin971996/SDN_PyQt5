@@ -253,13 +253,13 @@ class MainWindow(QMainWindow):
         editMenu.addAction(self.addVerticalAction("images/vertical.png", "Vertical"))
         editMenu.addAction(self.addHorizontalAction("images/horizontal.png", "Horizontal"))
         editMenu.addAction(self.addTextAction("images/text.png", "Text"))
+        editMenu.addAction(self.addRandomAction("images/random.png", "Random"))
 
         actionMenu.addAction(self.addStartAction("images/start.png", "Start"))
         actionMenu.addAction(self.addStopAction("images/stop.png", "Stop"))
-        actionMenu.addAction(self.addMonitorAction("images/table.png", "Monitoring Metrics"))
+        actionMenu.addAction(self.addMonitorAction("images/table.png", "Dynamic Metrics"))
         actionMenu.addAction(self.addPlotAction("images/plot.png", "Plot Result"))
         actionMenu.addAction(self.addPathsAction("images/paths.png", "Paths"))
-        actionMenu.addAction(self.addRandomAction("images/random.png", "Random"))
         actionMenu.addAction(self.addTerminalAction("images/terminal.png", "Terminal"))
 
         self.checkboxBw = QAction("Show bandwidth")
@@ -309,7 +309,7 @@ class MainWindow(QMainWindow):
         self.toolbarRight.addAction(self.addSaveAsAction("images/save_as.png", "Save As"))
         self.toolbarRight.addAction(self.addStartAction("images/start.png", "Start"))
         self.toolbarRight.addAction(self.addStopAction("images/stop.png", "Stop"))
-        self.toolbarRight.addAction(self.addMonitorAction("images/table.png", "Monitoring Metrics"))
+        self.toolbarRight.addAction(self.addMonitorAction("images/table.png", "Dynamic Metrics"))
         self.toolbarRight.addAction(self.addPlotAction("images/plot.png", "Plot Result"))
         self.toolbarRight.addAction(self.addPathsAction("images/paths.png", "Paths"))
         self.toolbarRight.addAction(self.addTerminalAction("images/terminal.png", "Terminal"))
@@ -892,7 +892,7 @@ class MainWindow(QMainWindow):
             base_name = os.path.basename(base_name)
             options = QFileDialog.Options()
             filter_pattern = f"*{base_name}*.py"
-            self.fileNameMininetToRun, _ = QFileDialog.getOpenFileName(self, "Run Mininet",
+            self.fileNameMininetToRun, _ = QFileDialog.getOpenFileName(self, "Mininet Script",
                                                                     "topo_mininet/", 
                                                                     f"Python Files ({filter_pattern});;All Files (*)", 
                                                                     options=options)
@@ -1338,25 +1338,25 @@ class MainWindow(QMainWindow):
         dialog = QDialog()
         dialog.setMinimumSize((QSize(400, 250)))
         dialog.setFont(self.font)
-        title = "Metric of link {}-{}".format(link.startNode.name, link.endNode.name)
+        title = f"Configure Metrics for Link: {link.startNode.name} - {link.endNode.name}"
         dialog.setWindowTitle(title)
 
         layout = QVBoxLayout()
         dialog.setLayout(layout)
 
-        bwLabel = QLabel("Set bandwidth (Mbps):", dialog)
+        bwLabel = QLabel("Bandwidth (Mbps):", dialog)
         layout.addWidget(bwLabel)
         bw = QLineEdit(dialog)
         bw.setText(curBw)
         layout.addWidget(bw)
 
-        delayLabel = QLabel("Set delay (ms):", dialog)
+        delayLabel = QLabel("Delay (ms):", dialog)
         layout.addWidget(delayLabel)
         delay = QLineEdit(dialog)
         delay.setText(curDelay)
         layout.addWidget(delay)
 
-        lossLabel = QLabel("Set loss (%):", dialog)
+        lossLabel = QLabel("Packet Loss Rate (%):", dialog)
         layout.addWidget(lossLabel)
         loss = QLineEdit(dialog)
         loss.setText(curLoss)
@@ -1365,7 +1365,7 @@ class MainWindow(QMainWindow):
         hLayout = QHBoxLayout()
         buttonChange = QPushButton('Apply')
         buttonChange.clicked.connect(lambda: self.changeLinkMetric(dialog, link, delay.text(), bw.text(), loss.text()))
-        buttonClose = QPushButton('Close')
+        buttonClose = QPushButton('Cancel')
         buttonClose.clicked.connect(dialog.reject)
         hLayout.addStretch(1)
         hLayout.addWidget(buttonClose)
@@ -1388,7 +1388,7 @@ class MainWindow(QMainWindow):
         if self.nodeSelected:
             dialog = QDialog()
             dialog.setFont(self.font)
-            title = "Parameters of " + self.nodeSelected.name
+            title = f"Configure {self.nodeSelected.name} Parameters"
             dialog.setWindowTitle(title)
 
             layout = QVBoxLayout()
@@ -1396,28 +1396,28 @@ class MainWindow(QMainWindow):
 
             if self.nodeSelected.nameClass == "Controller":
                 dialog.setMinimumSize((QSize(600, 300)))
-                idLabel = QLabel("ID: "+str(self.nodeSelected.id), dialog)
+                idLabel = QLabel(f"Controller ID: {self.nodeSelected.id}", dialog)
                 layout.addWidget(idLabel)
 
-                ipLabel = QLabel("Set IP:", dialog)
+                ipLabel = QLabel("IP Address:", dialog)
                 layout.addWidget(ipLabel)
                 ip = QLineEdit(dialog)
                 ip.setText(self.nodeSelected.ip)
                 layout.addWidget(ip)
 
-                portLabel = QLabel("Set port:", dialog)
+                portLabel = QLabel("Port Number:", dialog)
                 layout.addWidget(portLabel)
                 port = QLineEdit(dialog)
                 port.setText(str(self.nodeSelected.port))
                 layout.addWidget(port)
 
-                srLabel = QLabel("Choose script:", dialog)
+                srLabel = QLabel("Ryu Script Path:", dialog)
                 layout.addWidget(srLabel)
                 hLayout = QHBoxLayout()
                 sr = QLineEdit(dialog)
                 sr.setText(str(self.nodeSelected.script))
                 hLayout.addWidget(sr)
-                button = QPushButton('Select File')
+                button = QPushButton('Browse')
                 button.clicked.connect(lambda: self.selectController(sr))
                 hLayout.addWidget(button)
             
@@ -1426,7 +1426,7 @@ class MainWindow(QMainWindow):
                 hLayout = QHBoxLayout()
                 buttonChange = QPushButton('Apply')
                 buttonChange.clicked.connect(lambda: self.changeController(dialog, ip.text(), port.text(), sr.text()))
-                buttonClose = QPushButton('Close')
+                buttonClose = QPushButton('Cancel')
                 buttonClose.clicked.connect(dialog.reject)
                 hLayout.addStretch(1)
                 hLayout.addWidget(buttonClose)
@@ -1437,20 +1437,17 @@ class MainWindow(QMainWindow):
             
             elif self.nodeSelected.nameClass == "Switch":
                 dialog.setMinimumSize((QSize(300, 120)))
-                idLabel = QLabel("ID: "+str(self.nodeSelected.id), dialog)
+                idLabel = QLabel(f"Switch ID: {self.nodeSelected.id}", dialog)
                 layout.addWidget(idLabel)
 
-                numberPortLabel = QLabel("Number of ports: "+str(self.nodeSelected.numberPorts), dialog)
-                layout.addWidget(numberPortLabel)
+                portCountLabel = QLabel(f"Number of Ports: {self.nodeSelected.numberPorts}", dialog)
+                layout.addWidget(portCountLabel)
 
                 hLayout = QHBoxLayout()
-                buttonChange = QPushButton('Apply')
-                buttonChange.clicked.connect(dialog.accept)
-                buttonClose = QPushButton('Close')
+                buttonClose = QPushButton('Cancel')
                 buttonClose.clicked.connect(dialog.reject)
                 hLayout.addStretch(1)
                 hLayout.addWidget(buttonClose)
-                hLayout.addWidget(buttonChange)
                 layout.addLayout(hLayout)
 
                 result = dialog.exec()
@@ -1458,19 +1455,19 @@ class MainWindow(QMainWindow):
             else:
                 dialog.setMinimumSize((QSize(1000, 600)))
                 
-                idLabel = QLabel("ID: "+str(self.nodeSelected.id), dialog)
+                idLabel = QLabel(f"Host ID: {self.nodeSelected.id}", dialog)
                 layout.addWidget(idLabel)
                 
-                numberPortLabel = QLabel("Number of ports: "+str(self.nodeSelected.numberPorts), dialog)
-                layout.addWidget(numberPortLabel)
+                portCountLabel = QLabel(f"Number of Ports: {self.nodeSelected.numberPorts}", dialog)
+                layout.addWidget(portCountLabel)
 
-                ipLabel = QLabel("Set IP:", dialog)
+                ipLabel = QLabel("IP Address:", dialog)
                 layout.addWidget(ipLabel)
                 ip = QLineEdit(dialog)
                 ip.setText(self.nodeSelected.ip)
                 layout.addWidget(ip)
 
-                mac_label = QLabel("Set MAC:", dialog)
+                mac_label = QLabel("MAC Address:", dialog)
                 layout.addWidget(mac_label)
                 mac = QLineEdit(dialog)
                 mac.setText(self.nodeSelected.mac)
@@ -1491,7 +1488,7 @@ class MainWindow(QMainWindow):
                 hLayout.addWidget(checkbox2)
                 layout.addLayout(hLayout)
 
-                cmd_label = QLabel("Set command:", dialog)
+                cmd_label = QLabel("Iperf3 Bash Script:", dialog)
                 layout.addWidget(cmd_label)
                 cmd_edit = QPlainTextEdit(dialog)
                 cmd_edit.setPlainText(self.nodeSelected.command)
@@ -1500,7 +1497,7 @@ class MainWindow(QMainWindow):
                 hLayout = QHBoxLayout()
                 buttonChange = QPushButton('Apply')
                 buttonChange.clicked.connect(lambda: self.changeHost(dialog, ip.text(), mac.text(), checkbox1, cmd_edit))
-                buttonClose = QPushButton('Close')
+                buttonClose = QPushButton('Cancel')
                 buttonClose.clicked.connect(dialog.reject)
                 hLayout.addStretch(1)
                 hLayout.addWidget(buttonClose)
@@ -1563,7 +1560,7 @@ class MainWindow(QMainWindow):
         return True
     
     def selectController(self, sr):
-        fileName, _ = QFileDialog.getOpenFileName(self, "Select File", "ryu_controller/")
+        fileName, _ = QFileDialog.getOpenFileName(self, "Ryu Script", "ryu_controller/")
         self.fileNameRyu = fileName
         if self.fileNameRyu:
             sr.setText(self.fileNameRyu)
