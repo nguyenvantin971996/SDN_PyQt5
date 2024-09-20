@@ -26,6 +26,8 @@ class FA:
         self.y = y
         self.a0 = a0
         self.b0 = b0
+        self.a = 0
+
         self.modify = modify
 
     def reset_1(self):
@@ -107,7 +109,7 @@ class FA:
                         b = self.b0 * np.exp(-self.y * r2)
                         new_code += b * (self.population[j].code - self.population[i].code)
                     e = np.random.rand(self.switches.size) - 0.5
-                    new_code += self.a0 * 2 * e
+                    new_code += self.a * 2 * e
                     new_code = self.normalize(new_code)
                     new_solution = Solution()
                     new_solution.code = new_code
@@ -123,7 +125,7 @@ class FA:
                         b = self.b0 * np.exp(-self.y * r2)
                         new_code += b * (self.population[j].code - self.population[i].code)
                         e = np.random.rand(self.switches.size) - 0.5
-                        new_code += self.a0 * 2 * e
+                        new_code += self.a * 2 * e
                         new_code = self.normalize(new_code)
                         new_solution = Solution()
                         new_solution.code = new_code
@@ -172,6 +174,7 @@ class FA:
         self.reset_2()
         for iteration in range(self.Max):
             time.sleep(0)
+            self.a = self.a0*pow(0.9,iteration)
             self.attract()
             self.compare_best()
             self.reset_1()

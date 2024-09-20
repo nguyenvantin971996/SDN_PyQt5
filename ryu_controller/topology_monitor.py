@@ -19,15 +19,15 @@ class TopologyMonitor(app_manager.RyuApp):
         self.datapaths = {}
         self.graph = nx.DiGraph()
         self.logger = logging.getLogger(self.name)
-        # hub.spawn(self._discover_thread)
+        hub.spawn(self._discover_thread)
 
-    # def _discover_thread(self):
-    #     while True:
-    #         try:
-    #             self._update_topology()
-    #         except Exception as e:
-    #             self.logger.error("Failed to update topology: %s", str(e))
-    #         hub.sleep(DISCOVERY_PERIOD)
+    def _discover_thread(self):
+        while True:
+            try:
+                self._update_topology()
+            except Exception as e:
+                self.logger.error("Failed to update topology: %s", str(e))
+            hub.sleep(DISCOVERY_PERIOD)
 
     def _update_topology(self):
         switch_list = get_switch(self, None)

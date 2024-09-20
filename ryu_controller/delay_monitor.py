@@ -83,7 +83,7 @@ class DelayMonitor(app_manager.RyuApp):
             self.topology_monitor.graph[src][dst]['lldpdelay'] = lldpdelay
         except:
             if self.topology_monitor is None:
-                self.topology_monitor = lookup_service_brick('network_awareness')
+                self.topology_monitor = lookup_service_brick('topology_monitor')
             return
 
     def create_link_latency(self):

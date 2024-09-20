@@ -39,6 +39,7 @@ class PortMonitor(app_manager.RyuApp):
         while True:
             try:
                 self.get_inf()
+                self.get_rm_bw_lu()
                 hub.sleep(setting.MONITOR_PERIOD)
             except Exception as e:
                 self.logger.error("Error in monitoring loop: %s", str(e))
@@ -64,8 +65,6 @@ class PortMonitor(app_manager.RyuApp):
         if not self.stats_reply_event.wait(timeout=setting.time_out):
             # self.logger.error("Timeout waiting for stats replies.")
             return
-
-        self.get_rm_bw_lu()
 
 
     def _request_stats(self, datapath):
@@ -111,6 +110,9 @@ class PortMonitor(app_manager.RyuApp):
             self.link_costs.clear()
             self.link_costs.update(new_link_costs)
 
+    def get_free_bw(self, capacity, speed):
+        return max(capacity - speed, 0)
+    
     def save_stats(self, _dict, key, value, length):
         if key not in _dict:
             _dict[key] = []
@@ -119,21 +121,6 @@ class PortMonitor(app_manager.RyuApp):
         if len(_dict[key]) > length:
             _dict[key].pop(0)
 
-    def get_speed(self, now, pre, period):
-        if period:
-            return 8*(now - pre) / (period*10**6)
-        else:
-            return 0.0
-
-    def get_free_bw(self, capacity, speed):
-        return max(capacity - speed, 0)
-
-    def get_time(self, sec, nsec):
-        return sec + nsec / (10 ** 9)
-
-    def get_period(self, n_sec, n_nsec, p_sec, p_nsec):
-        return self.get_time(n_sec, n_nsec) - self.get_time(p_sec, p_nsec)
-    
     def get_port_speed(self, key):
         pre = 0
         period = 0
@@ -154,6 +141,18 @@ class PortMonitor(app_manager.RyuApp):
                 self.throughputs[src].setdefault(dst, {})
                 self.throughputs[src][dst] = speed
                 break
+
+    def get_period(self, n_sec, n_nsec, p_sec, p_nsec):
+        return self.get_time(n_sec, n_nsec) - self.get_time(p_sec, p_nsec)
+    
+    def get_time(self, sec, nsec):
+        return sec + nsec / (10 ** 9)
+    
+    def get_speed(self, now, pre, period):
+        if period:
+            return 8*(now - pre) / (period*10**6)
+        else:
+            return 0.0
 
     @set_ev_cls(ofp_event.EventOFPPortStatsReply, MAIN_DISPATCHER)
     def _port_stats_reply_handler(self, ev):

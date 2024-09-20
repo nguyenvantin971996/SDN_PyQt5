@@ -119,25 +119,25 @@ class ACS:
                 p2 = best_ant.path[i + 1]
                 self.pheromone[p1][p2] = (1 - self.p) * self.pheromone[p1][p2] + self.p * best_ant.delta
      
-    def memorize_candidates(self):
+    def compare_best(self):
         self.colony.sort(key=lambda x: x.fitness)
         candidates = []
-        for ant in self.colony:
+        for solution in self.colony:
             if len(candidates) >= self.K:
                 break
-            if not any(np.array_equal(ant.path, candidate.path) for candidate in candidates):
-                candidates.append(copy.deepcopy(ant))
-        self.candidates.extend(candidates) 
-    
-    def get_best(self):
-        self.candidates.sort(key=lambda x: x.fitness)
-        unique_best = []
-        for candidate in self.candidates:
-            if len(unique_best) >= self.K:
-                break
-            if not any(np.array_equal(candidate.path, ant.path) for ant in unique_best):
-                unique_best.append(copy.deepcopy(candidate))
-        self.best = unique_best
+            if not any(np.array_equal(solution.path, candidate.path) for candidate in candidates):
+                candidates.append(copy.deepcopy(solution))
+
+        for candidate in candidates:
+            if len(self.best) < self.K:
+                self.best.append(copy.deepcopy(candidate))
+                self.best.sort(key=lambda x: x.fitness)
+
+            else:
+                for id in range(len(self.best)):
+                    if (not any(np.array_equal(candidate.path, solution.path) for solution in self.best)) and candidate.fitness < self.best[id].fitness:
+                        self.best[id] = copy.deepcopy(candidate)
+                        break
 
     def show(self):
         for item in self.colony:
@@ -155,28 +155,10 @@ class ACS:
         for iteration in range(self.Max):
             self.create_path()
             self.global_pheromone_update()
-            self.memorize_candidates()
-            # self.show()
-        self.get_best()
+            self.compare_best()
+
         vertices_paths = [solution.path.tolist() for solution in self.best]
         edges_paths = self.compute_edges_of_paths(vertices_paths)
         length_paths = [float(solution.fitness) for solution in self.best]
         
         return vertices_paths, edges_paths, length_paths
-
-# import time
-# from get_metric import getMetric
-# from YenAlgorithm import YenAlgorithm
-# link_costs = getMetric('../topo_mininet/10_nodes.json')
-# alg = ACS(link_costs, 1, 10, 4, 10, 100, 0.1, 0.1, 0.5, 0.9, 1)
-# start = time.time()
-# paths, paths_edges, pw = alg.compute_shortest_paths()
-# end = time.time()
-# print(end - start)
-# print(paths, pw)
-# alg_2 = YenAlgorithm(link_costs, 1, 10, 4)
-# start = time.time()
-# paths, paths_edges, pw = alg_2.compute_shortest_paths()
-# end = time.time()
-# print(end - start)
-# print(paths, pw)
