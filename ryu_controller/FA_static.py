@@ -146,7 +146,7 @@ class FA:
 
     def compute_shortest_paths(self):
         for iteration in range(self.Max):
-            self.a = self.a0*pow(0.9,iteration)
+            self.a = self.a0*pow(1,iteration)
             self.attract()
             self.compare_best()
 

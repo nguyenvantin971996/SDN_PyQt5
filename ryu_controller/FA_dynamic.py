@@ -174,7 +174,7 @@ class FA:
         self.reset_2()
         for iteration in range(self.Max):
             time.sleep(0)
-            self.a = self.a0*pow(0.9,iteration)
+            self.a = self.a0*pow(1,iteration)
             self.attract()
             self.compare_best()
             self.reset_1()
