@@ -4,11 +4,9 @@ from ryu.controller.handler import set_ev_cls, MAIN_DISPATCHER, DEAD_DISPATCHER
 from ryu.topology import event
 from ryu.controller import ofp_event
 from ryu.topology.api import get_link, get_switch
-from ryu.lib import hub
 import networkx as nx
 import logging
 
-from setting import DISCOVERY_PERIOD
 
 class TopologyMonitor(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -19,15 +17,6 @@ class TopologyMonitor(app_manager.RyuApp):
         self.datapaths = {}
         self.graph = nx.DiGraph()
         self.logger = logging.getLogger(self.name)
-        hub.spawn(self._discover_thread)
-
-    def _discover_thread(self):
-        while True:
-            try:
-                self._update_topology()
-            except Exception as e:
-                self.logger.error("Failed to update topology: %s", str(e))
-            hub.sleep(DISCOVERY_PERIOD)
 
     def _update_topology(self):
         switch_list = get_switch(self, None)
@@ -36,16 +25,22 @@ class TopologyMonitor(app_manager.RyuApp):
 
     def _update_graph(self, switch_list, links):
         new_graph = nx.DiGraph(self.graph)
-        
         for switch in switch_list:
             new_graph.add_node(switch.dp.id)
 
         for link in links:
             src = link.src
             dst = link.dst
-            new_graph.add_edge(src.dpid, dst.dpid, weight=1, src_port=src.port_no, dst_port=dst.port_no, status='up')
-            
+
+            if self.graph.has_edge(src.dpid, dst.dpid) and self.graph[src.dpid][dst.dpid]['status'] == 'down':
+                status = 'down'
+            else:
+                status = 'up'
+
+            new_graph.add_edge(src.dpid, dst.dpid, weight=1, src_port=src.port_no, dst_port=dst.port_no, status=status)
+
         self.graph = new_graph
+
 
     @set_ev_cls([event.EventSwitchEnter, event.EventSwitchLeave, event.EventLinkAdd, event.EventLinkDelete])
     def _get_topology(self, ev):

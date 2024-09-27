@@ -15,6 +15,7 @@ def makePlotChart(fileNames):
         result = {}
         maxThr = 0
         minThr = 1000000
+        isUDP = False
         for i, fileName in enumerate(fileNames):
             try:
                 with open(fileName, 'r') as file:
