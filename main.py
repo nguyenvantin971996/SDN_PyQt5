@@ -915,12 +915,12 @@ class MainWindow(QMainWindow):
                 except ValueError:
                     QMessageBox.warning(self, "Mininet", "Can not start Mininet!")
 
-                # self.timer.timeout.connect(lambda: self.display_metrics(self.dynamicMetric.tableWidget1, 'throughput'))
-                # self.timer.timeout.connect(lambda: self.display_metrics(self.dynamicMetric.tableWidget2, 'latency'))
+                self.timer.timeout.connect(lambda: self.display_metrics(self.dynamicMetric.tableWidget1, 'throughput'))
+                self.timer.timeout.connect(lambda: self.display_metrics(self.dynamicMetric.tableWidget2, 'latency'))
                 
-                # self.timer.timeout.connect(self.get_paths)
-                # updateInterval = 2000
-                # self.timer.start(updateInterval)
+                self.timer.timeout.connect(self.get_paths)
+                updateInterval = 2000
+                self.timer.start(updateInterval)
     
     def get_paths(self):
         try:

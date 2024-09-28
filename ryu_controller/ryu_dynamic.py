@@ -71,9 +71,6 @@ class MultiPathRouting(app_manager.RyuApp):
             start_time = time.time()
             keys_list = []
             for key in list(self.paths_dict.keys()):
-                if (key[2], key[0]) not in keys_list and (key[0], key[2]) not in keys_list:
-                    src_dst = (key[0], key[2])
-                    keys_list.append(src_dst)
                     self.update_paths(key)
             end_time = time.time()
             execution_time = end_time - start_time
@@ -87,13 +84,13 @@ class MultiPathRouting(app_manager.RyuApp):
             self.t += 1
             if self.t > 25:
                 for key, value in list(self.paths_dict.items()):
-                    key_sum = key[-2] + '-->' + key[-1]
+                    key_sum = value[3] + '-->' + value[4]
                     if key_sum not in self.sum_pw:
                         self.sum_pw[key_sum] = []
                     paths_pw = [self.compute_path_length(metric, path) for path in value[0]]
                     self.sum_pw[key_sum].append(sum(paths_pw))
             if self.t == 45:
-                with open('/home/tin/SDN_PyQt5/result/ACS.json', 'w') as f:
+                with open('/home/tin/SDN_PyQt5/result/Yen_dynamic.json', 'w') as f:
                     json.dump(self.sum_pw, f, indent=4)
         
     def compute_path_length(self, metric, path):
@@ -105,15 +102,27 @@ class MultiPathRouting(app_manager.RyuApp):
         return float(path_length)
     
     def update_paths(self, key):
-        # alg = YenAlgorithm_dynamic(self.port_monitor, self.paths_dict, key, K)
+        alg = YenAlgorithm_dynamic(self.port_monitor, self.paths_dict, key, K)
         # alg = GA(self.port_monitor, self.paths_dict, key, K, 10, 100000, 0.7, 0.7, 2)
         # alg = ABC(self.port_monitor, self.paths_dict, key, K, 10, 100000, 20)
         # alg = BFA(self.port_monitor, self.paths_dict, key, K, 10, 100000, 0.7, 2, 2)
         # alg = AS(self.port_monitor, self.paths_dict, key, K, 10, 100000, 0.1, 1, 1, 0.5, 1)
-        alg = ACS(self.port_monitor, self.paths_dict, key, K, 10, 100000, 0.1, 1, 1, 0.5, 1)
+        # alg = ACS(self.port_monitor, self.paths_dict, key, K, 10, 100000, 0.1, 1, 1, 0.5, 1)
         # alg = FA(self.port_monitor, self.paths_dict, key, K, 10, 100000, 1, 1, 1, True)
         
         alg.compute_shortest_paths(time_limit)
+
+        # src = key[0]
+        # first_port = key[1]
+        # dst = key[2]
+        # last_port = key[3]
+
+        # paths, paths_edges, pw, src_ip, dst_ip, src_dst, streams = self.paths_dict[key]
+
+        # normalize_pw = self.make_normalized(pw)
+
+        # for stream_index, tcp_pkt, udp_pkt in streams:
+        #     self.install_paths_ip(src, first_port, dst, last_port, src_ip, dst_ip, paths, normalize_pw, stream_index, tcp_pkt, udp_pkt)
 
     def get_optimal_paths(self, src, dst):
         metric = self.port_monitor.get_link_costs()
@@ -206,12 +215,23 @@ class MultiPathRouting(app_manager.RyuApp):
                         ipv4_dst=ip_dst,
                         udp_src=udp_pkt.src_port,
                         udp_dst=udp_pkt.dst_port
-                    ) 
+                    )
+            
+            self.remove_flows(dp, match_ip)
+
             actions = [ofp_parser.OFPActionOutput(out_port)]    
             self.add_flow(dp, 32768, match_ip, actions)
 
         return selected_path[src][1]
 
+    def remove_flows(self, datapath, match):
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
+        mod = parser.OFPFlowMod(datapath=datapath, command=ofproto.OFPFC_DELETE,
+                                out_port=ofproto.OFPP_ANY, out_group=ofproto.OFPG_ANY,
+                                match=match)
+        datapath.send_msg(mod)
+    
     def add_flow(self, datapath, priority, match, actions, buffer_id=None):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
@@ -319,10 +339,12 @@ class MultiPathRouting(app_manager.RyuApp):
             h2 = self.hosts[dst]
                 
             paths, paths_edges, pw = [], [], []
-            if (h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip) not in list(self.paths_dict.keys()):
+            if (h1[0], h1[1], h2[0], h2[1]) not in list(self.paths_dict.keys()):
                 paths, paths_edges, pw = self.get_optimal_paths(h1[0], h2[0])
                 src_dst = "Round Robin: " + src_ip + " --> " + dst_ip
-                self.paths_dict[(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip)] = [paths, paths_edges, pw, src_ip, dst_ip, 0, src_dst]
+                streams = []
+                streams.append((0, tcp_pkt, udp_pkt))
+                self.paths_dict[(h1[0], h1[1], h2[0], h2[1])] = [paths, paths_edges, pw, src_ip, dst_ip, src_dst, streams]
                 normalize_pw = self.make_normalized(pw)
                 out_port = self.install_paths_ip(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip, paths, normalize_pw, 0, tcp_pkt, udp_pkt)
 
@@ -336,11 +358,12 @@ class MultiPathRouting(app_manager.RyuApp):
                 datapath.send_msg(out)
 
             else:
-                [paths, paths_edges, pw, x1, x2, index, x3] = self.paths_dict[(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip)]
+                [paths, paths_edges, pw, x1, x2, x3, streams] = self.paths_dict[(h1[0], h1[1], h2[0], h2[1])]
+                index = streams[-1][0]
                 next_index = (index+1)%len(paths)
                 normalize_pw = self.make_normalized(pw)
                 out_port = self.install_paths_ip(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip, paths, normalize_pw, next_index, tcp_pkt, udp_pkt)
-                self.paths_dict[(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip)][5] = next_index
+                self.paths_dict[(h1[0], h1[1], h2[0], h2[1])][-1].append((next_index, tcp_pkt, udp_pkt))
 
                 actions = [parser.OFPActionOutput(out_port)]
                 data = None
@@ -382,7 +405,7 @@ class NetworkStatRest(ControllerBase):
     
     @route('rest_api_app', '/rm_bw', methods=['GET'])
     def get_rm_bw(self, req, **kwargs):
-        rm_bw = self.app.port_monitor.get_rm_bw()
+        rm_bw = self.app.port_monitor.get_remaining_bandwidth()
         body = json.dumps(rm_bw)
         return Response(content_type='application/json', body=body, status=200)
     
@@ -392,7 +415,8 @@ class NetworkStatRest(ControllerBase):
         if len(self.app.paths_dict) != 0:
             i = 0
             for key, item in self.app.paths_dict.items():
-                paths_dict[i] = item
+                itm = item[:6]
+                paths_dict[i] = itm
                 i += 1
         body = json.dumps(paths_dict)
         return Response(content_type='application/json', body=body, status=200)
