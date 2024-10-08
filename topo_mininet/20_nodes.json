@@ -10,7 +10,7 @@
                 634,
                 115
             ],
-            "script": "/home/tin/SDN_PyQt5/ryu_controller/ryu_dynamic.py"
+            "script": "/home/tin/SDN_PyQt5/ryu_controller/ryu_dynamic_WCMP.py"
         }
     ],
     "switches": [
@@ -228,7 +228,7 @@
                 843
             ],
             "server": 0,
-            "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 50 -i 1 -u -b 1M -P 4 &\nwait"
+            "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 50 -i 1 -P 8 -u -b 10M &\nwait"
         },
         {
             "nameClass": "Host",
@@ -242,7 +242,7 @@
                 843
             ],
             "server": 1,
-            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2_ryu_dynamic.json &\nwait"
+            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/GA.json &\nwait"
         }
     ],
     "links": [
@@ -260,7 +260,7 @@
                     843
                 ],
                 "server": 0,
-                "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 50 -i 1 -u -b 1M -P 4 &\nwait"
+                "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 50 -i 1 -P 8 -u -b 10M &\nwait"
             },
             "endNode": {
                 "nameClass": "Switch",
@@ -677,7 +677,7 @@
                     843
                 ],
                 "server": 1,
-                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2_ryu_dynamic.json &\nwait"
+                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/GA.json &\nwait"
             },
             "port": [
                 4,

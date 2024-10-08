@@ -10,7 +10,7 @@ class Ant(object):
 
 class AS:
 
-    def __init__(self, port_monitor, paths_dict, key, K, N, Max, p, a, b, p0, Q):
+    def __init__(self, port_monitor, paths_dict, key, K, N, Max, p, a, b, Q, patience):
         self.port_monitor = port_monitor
         self.paths_dict = paths_dict
         self.weight_map = self.port_monitor.get_link_costs()
@@ -26,8 +26,13 @@ class AS:
         self.p = p
         self.a = a
         self.b = b
-        self.p0 = p0
         self.Q = Q
+
+        self.patience = patience
+        self.no_improvement_count = 0
+
+        self.colony = None
+        self.best = None
     
     def reset_1(self):
         self.switches = np.array(list(self.weight_map.keys()))
@@ -37,15 +42,16 @@ class AS:
         self.pheromone = self.create_pheromone()
 
     def reset_2(self):
-        self.colony = [Ant() for i in range(self.N)]
-        self.best = []
-        for path in self.paths_yen:
-            newSolution = Ant()
-            newSolution.path = np.array(path, dtype=int)
-            newSolution.fitness = self.evaluate(path)
-            self.best.append(newSolution)
-        self.best.sort(key=lambda x: x.fitness)
-        self.make_change_best()
+        if self.colony is None or self.best is None:
+            self.colony = [Ant() for i in range(self.N)]
+            self.best = []
+            for path in self.paths_yen:
+                newSolution = Ant()
+                newSolution.path = np.array(path, dtype=int)
+                newSolution.fitness = self.evaluate(path)
+                self.best.append(newSolution)
+            self.best.sort(key=lambda x: x.fitness)
+            self.make_change_best()
     
     def get_fitness_max(self, weight_map):
         s = 0
@@ -148,8 +154,11 @@ class AS:
                     self.best[id] = copy.deepcopy(candidate)
                     change_best = True
                     break
-        if change_best == True:
+        if change_best:
+            self.no_improvement_count = 0
             self.make_change_best()
+        else:
+            self.no_improvement_count += 1
     
     def make_change_best(self):
         self.paths_dict[self.key][0] = [solution.path.tolist() for solution in self.best]
@@ -181,4 +190,6 @@ class AS:
             self.re_evaluate()
             end = time.time()
             if end - start > time_limit:
+                break
+            if self.no_improvement_count >= self.patience:
                 break

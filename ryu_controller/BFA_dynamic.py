@@ -13,7 +13,7 @@ class Solution(object):
 
 class BFA:
 
-    def __init__(self, port_monitor, paths_dict, key, K, N, Max, w, c1, c2):
+    def __init__(self, port_monitor, paths_dict, key, K, N, Max, w, c1, c2, patience):
         self.port_monitor = port_monitor
         self.paths_dict = paths_dict
         self.weight_map = self.port_monitor.get_link_costs()
@@ -30,21 +30,29 @@ class BFA:
         self.c1 = c1
         self.c2 = c2
 
+        self.patience = patience
+        self.no_improvement_count = 0
+
+        self.best_global_solution = None
+        self.population = None
+        self.best = None
+
     def reset_1(self):
         self.switches = np.array(list(self.weight_map.keys()))
         self.fitness_max = self.get_fitness_max(self.weight_map)
 
     def reset_2(self):
-        self.best_global_solution = Solution()
-        self.population = [self.create_solution() for i in range(self.N)]
-        self.best = []
-        for path in self.paths_yen:
-            newSolution = Solution()
-            newSolution.path = np.array(path, dtype=int)
-            newSolution.fitness = self.evaluate(path)
-            self.best.append(newSolution)
-        self.best.sort(key=lambda x: x.fitness)
-        self.make_change_best()
+        if self.best_global_solution is None or self.population is None or self.best is None:
+            self.best_global_solution = Solution()
+            self.population = [self.create_solution() for i in range(self.N)]
+            self.best = []
+            for path in self.paths_yen:
+                newSolution = Solution()
+                newSolution.path = np.array(path, dtype=int)
+                newSolution.fitness = self.evaluate(path)
+                self.best.append(newSolution)
+            self.best.sort(key=lambda x: x.fitness)
+            self.make_change_best()
     
     def get_fitness_max(self, weight_map):
         s = 0
@@ -154,8 +162,11 @@ class BFA:
                     self.best[id] = copy.deepcopy(candidate)
                     change_best = True
                     break
-        if change_best == True:
+        if change_best:
+            self.no_improvement_count = 0
             self.make_change_best()
+        else:
+            self.no_improvement_count += 1
     
     def make_change_best(self):
         self.paths_dict[self.key][0] = [solution.path.tolist() for solution in self.best]
@@ -186,5 +197,7 @@ class BFA:
             self.re_evaluate()
             end = time.time()
             if end - start > time_limit:
+                break
+            if self.no_improvement_count >= self.patience:
                 break
             

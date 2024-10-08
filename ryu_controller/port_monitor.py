@@ -101,12 +101,14 @@ class PortMonitor(app_manager.RyuApp):
                     link_utilization = round(speed / capacity, 1)
 
                     if self.topology_monitor.graph[src][dst]['status'] == 'down':
-                        link_utilization = 1
+                        link_utilization = None
 
                     self.link_utilizations[src][dst] = link_utilization
 
-                    if link_utilization == 1:
-                        new_link_costs[src][dst] = Decimal('10')
+                    if link_utilization == None:
+                        new_link_costs[src][dst] = Decimal('1000')
+                    elif link_utilization == 1:
+                        new_link_costs[src][dst] = Decimal('100')
                     else:
                         new_link_costs[src][dst] = Decimal(str(round(1 / (1 - link_utilization), 1)))
 

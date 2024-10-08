@@ -78,7 +78,7 @@ def extractSwitchLinks(topo):
 
 def dynamicChanges(net):
 	links_to_toggle = extractSwitchLinks(net.topo)
-	sleep_durations = [3, 3, 2, 3, 3]
+	sleep_durations = [9]
 	current_down_links = []
 	link_index = 0
 	sleep_index = 0
@@ -87,14 +87,15 @@ def dynamicChanges(net):
 			net.configLinkStatus(src, dst, 'up')
 			#info('Link between %s and %s brought UP.\n'%(src, dst))
 		current_down_links = []
-		next_links = links_to_toggle[link_index:link_index+3]
-		if len(next_links) < 3:
-			next_links += links_to_toggle[:3 - len(next_links)]
+		next_links = []
+		for i in range(2):
+			next_link_index = (link_index + i * 4)%len(links_to_toggle)
+			next_links.append(links_to_toggle[next_link_index])
 		for src, dst in next_links:
 			net.configLinkStatus(src, dst, 'down')
 			#info('Link between %s and %s brought DOWN.\n'%(src, dst))
 			current_down_links.append((src, dst))
-		link_index = (link_index + 3)%len(links_to_toggle)
+		link_index = (link_index + 2*4)%len(links_to_toggle)
 		current_sleep = sleep_durations[sleep_index]
 		sleep(current_sleep)
 		sleep_index = (sleep_index + 1)%len(sleep_durations)

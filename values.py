@@ -6,7 +6,10 @@ valuesDelayHost = [1]
 valuesBwHost = [1000]
 valuesCostHost = [1.0]
 valuesCost = [1.0, 1.1, 1.3, 1.4, 1.7, 2.0, 2.5, 3.3, 5.0, 10.0]
-n_links_dynamic = 3
+n_links_dynamic = 2
+n_steps = 4
+durations = [9]
+
 
 s1 = '''from mininet.net import Mininet
 from mininet.node import Controller, RemoteController, OVSKernelSwitch
@@ -57,7 +60,7 @@ def extractSwitchLinks(topo):
 
 def dynamicChanges(net):
 	links_to_toggle = extractSwitchLinks(net.topo)
-	sleep_durations = [3, 3, 2, 3, 3]
+	sleep_durations = {durations}
 	current_down_links = []
 	link_index = 0
 	sleep_index = 0
@@ -66,14 +69,15 @@ def dynamicChanges(net):
 			net.configLinkStatus(src, dst, 'up')
 			#info('Link between %s and %s brought UP.\\n'%(src, dst))
 		current_down_links = []
-		next_links = links_to_toggle[link_index:link_index+{n_links_dynamic}]
-		if len(next_links) < {n_links_dynamic}:
-			next_links += links_to_toggle[:{n_links_dynamic} - len(next_links)]
+		next_links = []
+		for i in range({n_links_dynamic}):
+			next_link_index = (link_index + i * {n_steps})%len(links_to_toggle)
+			next_links.append(links_to_toggle[next_link_index])
 		for src, dst in next_links:
 			net.configLinkStatus(src, dst, 'down')
 			#info('Link between %s and %s brought DOWN.\\n'%(src, dst))
 			current_down_links.append((src, dst))
-		link_index = (link_index + {n_links_dynamic})%len(links_to_toggle)
+		link_index = (link_index + {n_links_dynamic}*{n_steps})%len(links_to_toggle)
 		current_sleep = sleep_durations[sleep_index]
 		sleep(current_sleep)
 		sleep_index = (sleep_index + 1)%len(sleep_durations)

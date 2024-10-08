@@ -9,7 +9,7 @@ class Ant(object):
         self.delta = 0
 
 class AS:
-    def __init__(self, weight_map, src, dst, K, N, Max, p, a, b, p0, Q):
+    def __init__(self, weight_map, src, dst, K, N, Max, p, a, b, Q):
         # Инициализация параметров алгоритма муравьиной системы
         self.weight_map = weight_map  # Граф
         self.switches = np.array(list(weight_map.keys()))  # Вершины графа

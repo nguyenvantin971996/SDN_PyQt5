@@ -11,7 +11,7 @@ class Solution(object):
 
 class GA:
     # Класс генетического алгоритма для нахождения кратчайшего пути
-    def __init__(self, port_monitor, paths_dict, key, K, N, Max, Pc, Pm, Ts):
+    def __init__(self, port_monitor, paths_dict, key, K, N, Max, Pc, Pm, Ts, patience):
         # Инициализация генетического алгоритма с заданными параметрами
         self.port_monitor = port_monitor  # Монитор портов для получения данных о графе
         self.paths_dict = paths_dict  # Словарь путей
@@ -28,6 +28,12 @@ class GA:
         self.Pm = Pm  # Вероятность мутации
         self.Pc = Pc  # Вероятность скрещивания
         self.Ts = Ts  # Размер турнира для отбора
+
+        self.patience = patience
+        self.no_improvement_count = 0
+
+        self.population = None
+        self.best = None
     
     def reset_1(self):
         # Сброс состояния алгоритма (вычисление максимальной приспособленности)
@@ -35,16 +41,17 @@ class GA:
         self.fitness_max = self.get_fitness_max(self.weight_map)
 
     def reset_2(self):
-        # Сброс начальной популяции и лучших решений
-        self.population = [self.create_solution() for _ in range(self.N)]  # Создание популяции
-        self.best = []  # Инициализация лучших решений
-        for path in self.paths_yen:
-            newSolution = Solution()  # Создание нового решения для каждого пути из Йена
-            newSolution.path = np.array(path, dtype=int)  # Преобразование пути в массив
-            newSolution.fitness = self.evaluate(path)  # Оценка приспособленности
-            self.best.append(newSolution)  # Добавление решения в список лучших
-        self.best.sort(key=lambda x: x.fitness)  # Сортировка лучших решений по приспособленности
-        self.make_change_best()  # Обновление лучших решений в словаре путей
+        if self.population is None or self.best is None:
+            # Сброс начальной популяции и лучших решений
+            self.population = [self.create_solution() for _ in range(self.N)]  # Создание популяции
+            self.best = []  # Инициализация лучших решений
+            for path in self.paths_yen:
+                newSolution = Solution()  # Создание нового решения для каждого пути из Йена
+                newSolution.path = np.array(path, dtype=int)  # Преобразование пути в массив
+                newSolution.fitness = self.evaluate(path)  # Оценка приспособленности
+                self.best.append(newSolution)  # Добавление решения в список лучших
+            self.best.sort(key=lambda x: x.fitness)  # Сортировка лучших решений по приспособленности
+            self.make_change_best()  # Обновление лучших решений в словаре путей
     
     def get_fitness_max(self, weight_map):
         # Вычисление максимальной приспособленности (суммы всех весов графа)
@@ -197,8 +204,11 @@ class GA:
                     self.best[id] = copy.deepcopy(candidate)  # Обновление лучших решений
                     change_best = True
                     break
-        if change_best == True:
+        if change_best:
+            self.no_improvement_count = 0
             self.make_change_best()  # Обновление словаря лучших решений
+        else:
+            self.no_improvement_count += 1
     
     def make_change_best(self):
         # Обновление словаря путей (список вершин, ребер и весов путей)
@@ -235,4 +245,6 @@ class GA:
             self.re_evaluate()
             end = time.time()  # Конец текущего итерации
             if end - start > time_limit:  # Прекращение выполнения, если превысили лимит времени
+                break
+            if self.no_improvement_count >= self.patience:
                 break

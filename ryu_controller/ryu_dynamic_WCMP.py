@@ -12,22 +12,29 @@ from ryu.app.wsgi import ControllerBase
 import random
 import time
 from ryu import cfg
-from setting import K
+from setting import K, patience
 from ryu.lib import hub
 from ryu.app.wsgi import WSGIApplication, ControllerBase, Response, route
 import json
 from decimal import Decimal
 
-from setting import n_flows
-from get_metric import getMetric
+from setting import n_flows, UPDATE_PATHS_PERIOD, time_limit
+
 
 from YenAlgorithm import YenAlgorithm
+from YenAlgorithm_dynamic import YenAlgorithm_dynamic
 from delay_monitor import DelayMonitor
 from port_monitor import PortMonitor
 from topology_monitor import TopologyMonitor
 
 CONF = cfg.CONF
 
+from ABC_dynamic import ABC
+from BFA_dynamic import BFA
+from FA_dynamic import FA
+from AS_dynamic import AS
+from ACS_dynamic import ACS
+from GA_dynamic import GA
 
 class MultiPathRouting(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -50,15 +57,70 @@ class MultiPathRouting(app_manager.RyuApp):
         self.topology_monitor: TopologyMonitor = _kwargs['topology_monitor']
         self.port_monitor: PortMonitor = _kwargs['port_monitor']
         self.delay_monitor: DelayMonitor = _kwargs['delay_monitor']
-
         self.arp_table = {}
         self.hosts = {}
         self.paths_dict = {}
+        self.si_instances = {}
         self.sw = 0
+        self.sum_pw = {}
+        self.t = 0
+        self.routing_background_thread = hub.spawn(self.routing_background)
+
+
+    def routing_background(self):
+        while True:
+            start_time = time.time()
+            metric = self.port_monitor.get_link_costs()
+            for key in list(self.paths_dict.keys()):
+                paths, paths_edges, pw, src_ip, dst_ip, src_dst, streams = self.paths_dict[key]
+                is_overloaded = False
+                for path in paths_edges:
+                    for edge in path:
+                        u, v = edge
+                        link_cost = metric[u][v]
+                        
+                        if link_cost is not None and link_cost >= Decimal('1000'):
+                            is_overloaded = True
+                            break
+                    if is_overloaded:
+                        break
+
+                if is_overloaded:
+                    self.rerouting(key)
+            end_time = time.time()
+            execution_time = end_time - start_time
+            sleep_time = max(UPDATE_PATHS_PERIOD - execution_time, 0)
+            hub.sleep(sleep_time)
     
+    def rerouting(self, key):
+        # alg = YenAlgorithm_dynamic(self.port_monitor, self.paths_dict, key, K)
+        if key in self.si_instances:
+            alg = self.si_instances[key]
+        else:
+            # alg = BFA(self.port_monitor, self.paths_dict, key, K, 20, 100000, 0.7, 2, 2, patience)
+            alg = GA(self.port_monitor, self.paths_dict, key, K, 20, 100000, 0.7, 0.7, 2, patience)
+            # alg = ABC(self.port_monitor, self.paths_dict, key, K, 20, 100000, 20, patience)
+            # alg = AS(self.port_monitor, self.paths_dict, key, K, 20, 100000, 0.1, 1, 1, 1, patience)
+            # alg = ACS(self.port_monitor, self.paths_dict, key, K, 20, 100000, 0.1, 1, 1, 0.5, 1, patience)
+            # alg = FA(self.port_monitor, self.paths_dict, key, K, 20, 100000, 1, 1, 1, patience, modify=False)
+            self.si_instances[key] = alg
+        
+        alg.compute_shortest_paths(time_limit)
+
+        src = key[0]
+        first_port = key[1]
+        dst = key[2]
+        last_port = key[3]
+
+        paths, paths_edges, pw, src_ip, dst_ip, src_dst, streams = self.paths_dict[key]
+
+        normalize_pw = self.make_normalized(pw)
+
+        for stream_index, tcp_pkt, udp_pkt in streams:
+            self.install_paths_ip(src, first_port, dst, last_port, src_ip, dst_ip, paths, normalize_pw, stream_index, tcp_pkt, udp_pkt)
+
     def get_optimal_paths(self, src, dst):
-        # metric = self.port_monitor.get_link_costs()
-        metric = getMetric('/home/tin/SDN_PyQt5/topo_mininet/15_nodes.json')
+        metric = self.port_monitor.get_link_costs()
         alg = YenAlgorithm(metric, src, dst, K)
         paths, paths_edges, pw = alg.compute_shortest_paths()
         return paths, paths_edges, pw
@@ -135,7 +197,6 @@ class MultiPathRouting(app_manager.RyuApp):
             in_port = selected_path[node][0]
             out_port = selected_path[node][1]
 
-
             match_ip = None
             if tcp_pkt:
                 match_ip = ofp_parser.OFPMatch(
@@ -156,12 +217,23 @@ class MultiPathRouting(app_manager.RyuApp):
                         ipv4_dst=ip_dst,
                         udp_src=udp_pkt.src_port,
                         udp_dst=udp_pkt.dst_port
-                    ) 
+                    )
+            
+            self.remove_flows(dp, match_ip)
+
             actions = [ofp_parser.OFPActionOutput(out_port)]    
             self.add_flow(dp, 32768, match_ip, actions)
 
         return selected_path[src][1]
 
+    def remove_flows(self, datapath, match):
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
+        mod = parser.OFPFlowMod(datapath=datapath, command=ofproto.OFPFC_DELETE,
+                                out_port=ofproto.OFPP_ANY, out_group=ofproto.OFPG_ANY,
+                                match=match)
+        datapath.send_msg(mod)
+    
     def add_flow(self, datapath, priority, match, actions, buffer_id=None):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
@@ -247,7 +319,7 @@ class MultiPathRouting(app_manager.RyuApp):
                 h2 = self.hosts[dst]
                 paths, paths_edges, pw = self.get_optimal_paths(h1[0], h2[0])
                 normalize_pw = self.make_normalized(pw)
-                out_port = self.install_paths_arp(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip, paths, pw)
+                out_port = self.install_paths_arp(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip, paths, normalize_pw)
 
                 paths_reverse, paths_edges_reverse, pw_reverse = self.get_optimal_paths(h2[0], h1[0])
                 normalize_pw_reverse = self.make_normalized(pw_reverse)
@@ -267,24 +339,15 @@ class MultiPathRouting(app_manager.RyuApp):
             dst_ip = ip_pkt.dst
             h1 = self.hosts[src]
             h2 = self.hosts[dst]
-
-            dst_port = None
-            src_port = None
-            if tcp_pkt:
-                src_port = str(tcp_pkt.src_port)
-                dst_port = str(tcp_pkt.dst_port)
-                
-            elif udp_pkt:
-                src_port = str(udp_pkt.src_port)
-                dst_port = str(udp_pkt.dst_port)
                 
             paths, paths_edges, pw = [], [], []
-            condition, port, src_ip_2, dst_ip_2 = self.check_key(src_ip, dst_ip, src_port, dst_port)
-            if condition:
+            if (h1[0], h1[1], h2[0], h2[1]) not in list(self.paths_dict.keys()):
                 paths, paths_edges, pw = self.get_optimal_paths(h1[0], h2[0])
+                src_dst = "WCMP: " + src_ip + " --> " + dst_ip
+                streams = []
+                streams.append((1, tcp_pkt, udp_pkt))
+                self.paths_dict[(h1[0], h1[1], h2[0], h2[1])] = [paths, paths_edges, pw, src_ip, dst_ip, src_dst, streams]
                 normalize_pw = self.make_normalized(pw)
-                src_dst = "WCMP: " + src_ip + " --> " + dst_ip + ', ' + src_port + ' - ' + dst_port
-                self.paths_dict[(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip, src_port, dst_port)] = [paths, paths_edges, pw, src_ip, dst_ip, 1, src_dst]
                 out_port = self.install_paths_ip(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip, paths, normalize_pw, 1, tcp_pkt, udp_pkt)
 
                 actions = [parser.OFPActionOutput(out_port)]
@@ -297,30 +360,21 @@ class MultiPathRouting(app_manager.RyuApp):
                 datapath.send_msg(out)
 
             else:
-                for key, value in self.paths_dict.items():
-                    if port in key and src_ip_2 == key[4] and dst_ip_2 == key[5]:
-                        [paths, paths_edges, pw, x1, x2, index, x3] = value
-                        next_index = index +1
-                        normalize_pw = self.make_normalized(pw)
-                        out_port = self.install_paths_ip(key[0], key[1], key[2], key[3], key[4], key[5], paths, normalize_pw, next_index, tcp_pkt, udp_pkt)
-                        self.paths_dict[key][5] = next_index
+                [paths, paths_edges, pw, x1, x2, x3, streams] = self.paths_dict[(h1[0], h1[1], h2[0], h2[1])]
+                index = streams[-1][0]
+                next_index = index +1
+                normalize_pw = self.make_normalized(pw)
+                out_port = self.install_paths_ip(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip, paths, normalize_pw, next_index, tcp_pkt, udp_pkt)
+                self.paths_dict[(h1[0], h1[1], h2[0], h2[1])][-1].append((next_index, tcp_pkt, udp_pkt))
 
-                        actions = [parser.OFPActionOutput(out_port)]
-                        data = None
-                        if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-                            data = msg.data
-                        out = parser.OFPPacketOut(
-                            datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,
-                            actions=actions, data=data)
-                        datapath.send_msg(out)
-                        
-    def check_key(self, src_ip, dst_ip, src_port, dst_port):
-        for key in list(self.paths_dict.keys()):
-            if src_port in key and src_ip == key[4] and dst_ip == key[5]:
-                return False, src_port, src_ip, dst_ip
-            if dst_port in key and src_ip == key[4] and dst_ip == key[5]:
-                return False, dst_port, src_ip, dst_ip
-        return True, None, None, None
+                actions = [parser.OFPActionOutput(out_port)]
+                data = None
+                if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+                    data = msg.data
+                out = parser.OFPPacketOut(
+                    datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,
+                    actions=actions, data=data)
+                datapath.send_msg(out)
     
 class NetworkStatRest(ControllerBase):
 
@@ -335,11 +389,6 @@ class NetworkStatRest(ControllerBase):
     
     @route('rest_api_app', '/topology_graph', methods=['GET'])
     def get_topology_graph(self, req, **kwargs):
-        """_summary_
-        Get topology graph data
-        Returns:
-            _type_: json string response
-        """
         graph = self.app.topology_monitor.get_topology_graph()
         body = json.dumps(graph)
         return Response(content_type='application/json', body=body, status=200)
@@ -358,7 +407,7 @@ class NetworkStatRest(ControllerBase):
     
     @route('rest_api_app', '/rm_bw', methods=['GET'])
     def get_rm_bw(self, req, **kwargs):
-        rm_bw = self.app.port_monitor.get_rm_bw()
+        rm_bw = self.app.port_monitor.get_remaining_bandwidth()
         body = json.dumps(rm_bw)
         return Response(content_type='application/json', body=body, status=200)
     
@@ -368,7 +417,8 @@ class NetworkStatRest(ControllerBase):
         if len(self.app.paths_dict) != 0:
             i = 0
             for key, item in self.app.paths_dict.items():
-                paths_dict[i] = item
+                itm = item[:6]
+                paths_dict[i] = itm
                 i += 1
         body = json.dumps(paths_dict)
         return Response(content_type='application/json', body=body, status=200)

@@ -8,11 +8,12 @@ class Solution:
         self.length = 0
 
 class YenAlgorithm:
-    def __init__(self, weight_map, src, dst, K):
+    def __init__(self, weight_map, src, dst, K, same_cost=False):
         self.weight_map = weight_map
         self.src = src
         self.dst = dst
         self.K = K
+        self.same_cost = same_cost
 
     def compute_shortest_paths(self):
         paths = []
@@ -23,6 +24,9 @@ class YenAlgorithm:
         paths.append(first_path)
         if len(first_path.path) == 0:
             return [], [], []
+        
+        base_cost = first_path.length if self.same_cost else None
+        
         B = []
         for k in range(1, self.K):
             for i in range(len(paths[-1].path) - 1):
@@ -55,12 +59,13 @@ class YenAlgorithm:
                     path = Solution()
                     path.path = totalPath
                     path.length = self.compute_path_length(totalPath)
-                    dk = True
-                    for path_b in B:
-                        if path_b.path == path.path:
-                            dk = False
-                    if dk:
-                        B.append(path)
+                    if not self.same_cost or path.length == base_cost:
+                        dk = True
+                        for path_b in B:
+                            if path_b.path == path.path:
+                                dk = False
+                        if dk:
+                            B.append(path)
 
             if not B:
                 break
@@ -103,8 +108,8 @@ class YenAlgorithm:
 #         # if weight_map[node_2][node_1] != None:
 #         #     weight_map[node_1][node_2] = weight_map[node_2][node_1]
 #         # else:
-#         weight_map[node_1][node_2] = Decimal(str(np.random.choice(values)))
-# alg = YenAlgorithm(weight_map, 1, 8, 4)
+#         weight_map[node_1][node_2] = 1
+# alg = YenAlgorithm(weight_map, 1, 8, 4, same_cost=True)
 # paths_vertices, paths_edges, paths_length = alg.compute_shortest_paths()
 # print(paths_vertices, paths_length)
 
