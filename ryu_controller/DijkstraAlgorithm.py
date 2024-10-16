@@ -30,6 +30,9 @@ class DijkstraAlgorithm:
                     if new_distance < self.distance[neighbor]:
                         self.distance[neighbor] = new_distance
                         self.previous[neighbor] = current_vertex
+                    elif new_distance == self.distance[neighbor]:
+                        if self._compare_lexicographically(current_vertex, self.previous[neighbor]):
+                            self.previous[neighbor] = current_vertex
 
         return self._recover_path(dst)
 
@@ -40,6 +43,9 @@ class DijkstraAlgorithm:
             if self.distance[vertex] < min_distance:
                 min_distance = self.distance[vertex]
                 nearest_vertex = vertex
+            elif self.distance[vertex] == min_distance:
+                if nearest_vertex is None or vertex < nearest_vertex:
+                    nearest_vertex = vertex
         return nearest_vertex
 
     def _recover_path(self, dst):
@@ -52,3 +58,10 @@ class DijkstraAlgorithm:
             path.append(current_vertex)
             current_vertex = self.previous[current_vertex]
         return path[::-1]
+    
+    def _compare_lexicographically(self, vertex1, vertex2):
+        if vertex1 is None:
+            return False
+        if vertex2 is None:
+            return True
+        return vertex1 < vertex2

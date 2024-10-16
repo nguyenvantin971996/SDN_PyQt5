@@ -70,9 +70,11 @@ class YenAlgorithm:
             if not B:
                 break
 
-            B = sorted(B, key=lambda x: x.length)
+            B = sorted(B, key=lambda x: (x.length, x.path))
             paths.append(B[0])
             B.pop(0)
+
+        paths = sorted(paths, key=lambda x: (x.length, x.path))
 
         paths_vertices = [p.path for p in paths]
         paths_edges = [self.compute_edges_of_path(p.path) for p in paths]
@@ -88,54 +90,3 @@ class YenAlgorithm:
             u, v = path[i], path[i + 1]
             length += self.weight_map[u][v]
         return float(length)
-
-
-# import numpy as np
-# values = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]
-# # values = [0,1,2,3,4,5,6,7,8,9,10]
-# weight_map={
-#     1:{2:None,3:None},
-#     2:{1:None,4:None,6:None},
-#     3:{1:None,4:None,7:None},
-#     4:{2:None,3:None,5:None},
-#     5:{4:None,6:None,7:None},
-#     6:{2:None,5:None,8:None},
-#     7:{3:None,5:None,8:None},
-#     8:{6:None,7:None}
-# }
-# for node_1 in weight_map.keys():
-#     for node_2 in weight_map[node_1].keys():
-#         # if weight_map[node_2][node_1] != None:
-#         #     weight_map[node_1][node_2] = weight_map[node_2][node_1]
-#         # else:
-#         weight_map[node_1][node_2] = 1
-# alg = YenAlgorithm(weight_map, 1, 8, 4, same_cost=True)
-# paths_vertices, paths_edges, paths_length = alg.compute_shortest_paths()
-# print(paths_vertices, paths_length)
-
-# import networkx as nx
-# from itertools import islice
-
-
-# # Create a graph
-# G = nx.DiGraph()
-
-# # Add edges to the graph
-# for node, edges in weight_map.items():
-#     for adjacent_node in edges:
-#         G.add_edge(node, adjacent_node, weight=weight_map[node][adjacent_node])  # Assuming unweighted edges
-
-# # Define the source and target
-# source = 1
-# target = 8
-
-# # Number of shortest paths to find
-# K = 4
-
-# # Find the K shortest paths
-# shortest_paths = nx.shortest_simple_paths(G, source, target)
-
-# # Print the paths
-# print(shortest_paths)
-# for path in shortest_paths:
-#     print(path, alg.compute_path_length(path))

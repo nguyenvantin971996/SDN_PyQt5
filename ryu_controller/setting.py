@@ -5,6 +5,8 @@ DISCOVERY_PERIOD = 2   			# For discovering topology.
 
 MONITOR_PERIOD = 1					# For monitoring traffic
 
+FLOW_PERIOD = 1
+
 DELAY_DETECTING_PERIOD = 2			# For detecting link delay.
 	
 MAX_CAPACITY = 100		# Max capacity of link
@@ -19,9 +21,13 @@ time_out = 1
 
 K = 4
 
+N = 50
+
+Max = 10000
+
 patience = 100
 
-n_flows = 8
+n_flows = 4
 
 w_1 = 0.8
 

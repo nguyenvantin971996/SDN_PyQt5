@@ -10,7 +10,7 @@
                 548,
                 99
             ],
-            "script": "/home/tin/SDN_PyQt5/ryu_controller/Round_Robin.py"
+            "script": "/home/tin/SDN_PyQt5/ryu_controller/DAMLB.py"
         }
     ],
     "switches": [
@@ -19,10 +19,10 @@
             "name": "S1",
             "id": 1,
             "center": [
-                316,
+                315,
                 520
             ],
-            "numberPorts": 6
+            "numberPorts": 5
         },
         {
             "nameClass": "Switch",
@@ -32,7 +32,7 @@
                 499,
                 283
             ],
-            "numberPorts": 3
+            "numberPorts": 5
         },
         {
             "nameClass": "Switch",
@@ -42,7 +42,7 @@
                 904,
                 169
             ],
-            "numberPorts": 4
+            "numberPorts": 3
         },
         {
             "nameClass": "Switch",
@@ -72,7 +72,7 @@
                 904,
                 906
             ],
-            "numberPorts": 4
+            "numberPorts": 3
         },
         {
             "nameClass": "Switch",
@@ -82,7 +82,7 @@
                 1299,
                 776
             ],
-            "numberPorts": 3
+            "numberPorts": 5
         },
         {
             "nameClass": "Switch",
@@ -92,27 +92,27 @@
                 695,
                 520
             ],
-            "numberPorts": 3
+            "numberPorts": 4
         },
         {
             "nameClass": "Switch",
             "name": "S9",
             "id": 9,
             "center": [
-                901,
-                705
+                904,
+                654
             ],
-            "numberPorts": 7
+            "numberPorts": 6
         },
         {
             "nameClass": "Switch",
             "name": "S10",
             "id": 10,
             "center": [
-                906,
-                343
+                904,
+                393
             ],
-            "numberPorts": 7
+            "numberPorts": 6
         },
         {
             "nameClass": "Switch",
@@ -122,7 +122,7 @@
                 1119,
                 520
             ],
-            "numberPorts": 3
+            "numberPorts": 4
         },
         {
             "nameClass": "Switch",
@@ -132,7 +132,7 @@
                 1511,
                 520
             ],
-            "numberPorts": 6
+            "numberPorts": 5
         }
     ],
     "hosts": [
@@ -148,7 +148,7 @@
                 520
             ],
             "server": 0,
-            "command": "#!/bin/bash\nsleep 10\niperf3 -c 10.0.0.2 -p 5000 -t 30 -i 1 -u -b 20M -P 10 &\nwait"
+            "command": "#!/bin/bash\nsleep 20\niperf3 -c 10.0.0.2 -p 5000 -t 60 -i 1 -u -b 20M -P 10 &\nwait"
         },
         {
             "nameClass": "Host",
@@ -162,7 +162,7 @@
                 520
             ],
             "server": 1,
-            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2_Round_Robin.json &\nwait"
+            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2_DAMLB.json &\nwait"
         },
         {
             "nameClass": "Host",
@@ -172,11 +172,11 @@
             "mac": "00:00:00:00:00:03",
             "numberPorts": 1,
             "center": [
-                1085,
-                131
+                315,
+                283
             ],
             "server": 0,
-            "command": "#!/bin/bash\niperf3 -c 10.0.0.4 -p 5000 -t 30 -i 1 -u -b 20M -P 10 &\nwait"
+            "command": "#!/bin/bash\niperf3 -c 10.0.0.4 -p 5000 -t 60 -i 1 -u -b 10M -P 10 &\nwait"
         },
         {
             "nameClass": "Host",
@@ -186,11 +186,11 @@
             "mac": "00:00:00:00:00:04",
             "numberPorts": 1,
             "center": [
-                1157,
-                967
+                1511,
+                771
             ],
             "server": 1,
-            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H4_Round_Robin.json &\nwait"
+            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H4_DAMLB.json &\nwait"
         }
     ],
     "links": [
@@ -201,10 +201,10 @@
                 "name": "S1",
                 "id": 1,
                 "center": [
-                    316,
+                    315,
                     520
                 ],
-                "numberPorts": 6
+                "numberPorts": 5
             },
             "endNode": {
                 "nameClass": "Switch",
@@ -214,7 +214,7 @@
                     499,
                     283
                 ],
-                "numberPorts": 3
+                "numberPorts": 5
             },
             "port": [
                 1,
@@ -235,7 +235,7 @@
                     499,
                     283
                 ],
-                "numberPorts": 3
+                "numberPorts": 5
             },
             "endNode": {
                 "nameClass": "Switch",
@@ -245,7 +245,7 @@
                     904,
                     169
                 ],
-                "numberPorts": 4
+                "numberPorts": 3
             },
             "port": [
                 2,
@@ -266,7 +266,7 @@
                     904,
                     169
                 ],
-                "numberPorts": 4
+                "numberPorts": 3
             },
             "endNode": {
                 "nameClass": "Switch",
@@ -307,7 +307,7 @@
                     1511,
                     520
                 ],
-                "numberPorts": 6
+                "numberPorts": 5
             },
             "port": [
                 2,
@@ -328,7 +328,7 @@
                     1511,
                     520
                 ],
-                "numberPorts": 6
+                "numberPorts": 5
             },
             "endNode": {
                 "nameClass": "Switch",
@@ -338,7 +338,7 @@
                     1299,
                     776
                 ],
-                "numberPorts": 3
+                "numberPorts": 5
             },
             "port": [
                 2,
@@ -359,7 +359,7 @@
                     1299,
                     776
                 ],
-                "numberPorts": 3
+                "numberPorts": 5
             },
             "endNode": {
                 "nameClass": "Switch",
@@ -369,7 +369,7 @@
                     904,
                     906
                 ],
-                "numberPorts": 4
+                "numberPorts": 3
             },
             "port": [
                 2,
@@ -390,7 +390,7 @@
                     904,
                     906
                 ],
-                "numberPorts": 4
+                "numberPorts": 3
             },
             "endNode": {
                 "nameClass": "Switch",
@@ -428,10 +428,10 @@
                 "name": "S1",
                 "id": 1,
                 "center": [
-                    316,
+                    315,
                     520
                 ],
-                "numberPorts": 6
+                "numberPorts": 5
             },
             "port": [
                 2,
@@ -443,16 +443,47 @@
             "cost": 5.0
         },
         {
+            "id": 9,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S1",
+                "id": 1,
+                "center": [
+                    315,
+                    520
+                ],
+                "numberPorts": 5
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S9",
+                "id": 9,
+                "center": [
+                    904,
+                    654
+                ],
+                "numberPorts": 6
+            },
+            "port": [
+                3,
+                1
+            ],
+            "bw": 100,
+            "delay": 20,
+            "loss": 0,
+            "cost": 10.0
+        },
+        {
             "id": 10,
             "startNode": {
                 "nameClass": "Switch",
                 "name": "S1",
                 "id": 1,
                 "center": [
-                    316,
+                    315,
                     520
                 ],
-                "numberPorts": 6
+                "numberPorts": 5
             },
             "endNode": {
                 "nameClass": "Switch",
@@ -462,16 +493,47 @@
                     695,
                     520
                 ],
-                "numberPorts": 3
+                "numberPorts": 4
             },
             "port": [
-                3,
+                4,
                 1
             ],
             "bw": 100,
             "delay": 50,
             "loss": 0,
             "cost": 1.1
+        },
+        {
+            "id": 11,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S10",
+                "id": 10,
+                "center": [
+                    904,
+                    393
+                ],
+                "numberPorts": 6
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S12",
+                "id": 12,
+                "center": [
+                    1511,
+                    520
+                ],
+                "numberPorts": 5
+            },
+            "port": [
+                1,
+                3
+            ],
+            "bw": 100,
+            "delay": 50,
+            "loss": 0,
+            "cost": 10.0
         },
         {
             "id": 12,
@@ -483,7 +545,7 @@
                     1511,
                     520
                 ],
-                "numberPorts": 6
+                "numberPorts": 5
             },
             "endNode": {
                 "nameClass": "Switch",
@@ -493,16 +555,47 @@
                     1119,
                     520
                 ],
-                "numberPorts": 3
+                "numberPorts": 4
             },
             "port": [
-                3,
+                4,
                 1
             ],
             "bw": 100,
             "delay": 90,
             "loss": 0,
             "cost": 1.4
+        },
+        {
+            "id": 13,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S2",
+                "id": 2,
+                "center": [
+                    499,
+                    283
+                ],
+                "numberPorts": 5
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S8",
+                "id": 8,
+                "center": [
+                    695,
+                    520
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                3,
+                2
+            ],
+            "bw": 100,
+            "delay": 40,
+            "loss": 0,
+            "cost": 10.0
         },
         {
             "id": 14,
@@ -521,19 +614,50 @@
                 "name": "S10",
                 "id": 10,
                 "center": [
-                    906,
-                    343
+                    904,
+                    393
                 ],
-                "numberPorts": 7
+                "numberPorts": 6
             },
             "port": [
                 3,
-                1
+                2
             ],
             "bw": 100,
             "delay": 40,
             "loss": 0,
             "cost": 1.3
+        },
+        {
+            "id": 15,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S7",
+                "id": 7,
+                "center": [
+                    1299,
+                    776
+                ],
+                "numberPorts": 5
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S11",
+                "id": 11,
+                "center": [
+                    1119,
+                    520
+                ],
+                "numberPorts": 4
+            },
+            "port": [
+                3,
+                2
+            ],
+            "bw": 100,
+            "delay": 50,
+            "loss": 0,
+            "cost": 2.0
         },
         {
             "id": 16,
@@ -552,14 +676,14 @@
                 "name": "S9",
                 "id": 9,
                 "center": [
-                    901,
-                    705
+                    904,
+                    654
                 ],
-                "numberPorts": 7
+                "numberPorts": 6
             },
             "port": [
                 3,
-                1
+                2
             ],
             "bw": 100,
             "delay": 90,
@@ -576,21 +700,21 @@
                     695,
                     520
                 ],
-                "numberPorts": 3
+                "numberPorts": 4
             },
             "endNode": {
                 "nameClass": "Switch",
                 "name": "S9",
                 "id": 9,
                 "center": [
-                    901,
-                    705
+                    904,
+                    654
                 ],
-                "numberPorts": 7
+                "numberPorts": 6
             },
             "port": [
-                2,
-                2
+                3,
+                3
             ],
             "bw": 100,
             "delay": 70,
@@ -604,10 +728,10 @@
                 "name": "S10",
                 "id": 10,
                 "center": [
-                    906,
-                    343
+                    904,
+                    393
                 ],
-                "numberPorts": 7
+                "numberPorts": 6
             },
             "endNode": {
                 "nameClass": "Switch",
@@ -617,11 +741,11 @@
                     1119,
                     520
                 ],
-                "numberPorts": 3
+                "numberPorts": 4
             },
             "port": [
-                2,
-                2
+                3,
+                3
             ],
             "bw": 100,
             "delay": 20,
@@ -638,21 +762,21 @@
                     904,
                     169
                 ],
-                "numberPorts": 4
+                "numberPorts": 3
             },
             "endNode": {
                 "nameClass": "Switch",
                 "name": "S10",
                 "id": 10,
                 "center": [
-                    906,
-                    343
+                    904,
+                    393
                 ],
-                "numberPorts": 7
+                "numberPorts": 6
             },
             "port": [
                 3,
-                3
+                4
             ],
             "bw": 100,
             "delay": 30,
@@ -666,10 +790,10 @@
                 "name": "S9",
                 "id": 9,
                 "center": [
-                    901,
-                    705
+                    904,
+                    654
                 ],
-                "numberPorts": 7
+                "numberPorts": 6
             },
             "endNode": {
                 "nameClass": "Switch",
@@ -679,10 +803,10 @@
                     904,
                     906
                 ],
-                "numberPorts": 4
+                "numberPorts": 3
             },
             "port": [
-                3,
+                4,
                 3
             ],
             "bw": 100,
@@ -700,21 +824,21 @@
                     695,
                     520
                 ],
-                "numberPorts": 3
+                "numberPorts": 4
             },
             "endNode": {
                 "nameClass": "Switch",
                 "name": "S10",
                 "id": 10,
                 "center": [
-                    906,
-                    343
+                    904,
+                    393
                 ],
-                "numberPorts": 7
+                "numberPorts": 6
             },
             "port": [
-                3,
-                4
+                4,
+                5
             ],
             "bw": 100,
             "delay": 60,
@@ -728,10 +852,10 @@
                 "name": "S9",
                 "id": 9,
                 "center": [
-                    901,
-                    705
+                    904,
+                    654
                 ],
-                "numberPorts": 7
+                "numberPorts": 6
             },
             "endNode": {
                 "nameClass": "Switch",
@@ -741,11 +865,11 @@
                     1119,
                     520
                 ],
-                "numberPorts": 3
+                "numberPorts": 4
             },
             "port": [
-                4,
-                3
+                5,
+                4
             ],
             "bw": 100,
             "delay": 60,
@@ -766,17 +890,52 @@
                     520
                 ],
                 "server": 0,
-                "command": "#!/bin/bash\nsleep 10\niperf3 -c 10.0.0.2 -p 5000 -t 30 -i 1 -u -b 20M -P 10 &\nwait"
+                "command": "#!/bin/bash\nsleep 20\niperf3 -c 10.0.0.2 -p 5000 -t 60 -i 1 -u -b 20M -P 10 &\nwait"
             },
             "endNode": {
                 "nameClass": "Switch",
                 "name": "S1",
                 "id": 1,
                 "center": [
-                    316,
+                    315,
                     520
                 ],
-                "numberPorts": 6
+                "numberPorts": 5
+            },
+            "port": [
+                1,
+                5
+            ],
+            "bw": 1000,
+            "delay": 1,
+            "loss": 0,
+            "cost": 1.0
+        },
+        {
+            "id": 26,
+            "startNode": {
+                "nameClass": "Host",
+                "name": "H3",
+                "id": 3,
+                "ip": "10.0.0.3",
+                "mac": "00:00:00:00:00:03",
+                "numberPorts": 1,
+                "center": [
+                    315,
+                    283
+                ],
+                "server": 0,
+                "command": "#!/bin/bash\niperf3 -c 10.0.0.4 -p 5000 -t 60 -i 1 -u -b 10M -P 10 &\nwait"
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S2",
+                "id": 2,
+                "center": [
+                    499,
+                    283
+                ],
+                "numberPorts": 5
             },
             "port": [
                 1,
@@ -797,7 +956,7 @@
                     1511,
                     520
                 ],
-                "numberPorts": 6
+                "numberPorts": 5
             },
             "endNode": {
                 "nameClass": "Host",
@@ -811,7 +970,42 @@
                     520
                 ],
                 "server": 1,
-                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2_Round_Robin.json &\nwait"
+                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2_DAMLB.json &\nwait"
+            },
+            "port": [
+                5,
+                1
+            ],
+            "bw": 1000,
+            "delay": 1,
+            "loss": 0,
+            "cost": 1.0
+        },
+        {
+            "id": 28,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S7",
+                "id": 7,
+                "center": [
+                    1299,
+                    776
+                ],
+                "numberPorts": 5
+            },
+            "endNode": {
+                "nameClass": "Host",
+                "name": "H4",
+                "id": 4,
+                "ip": "10.0.0.4",
+                "mac": "00:00:00:00:00:04",
+                "numberPorts": 1,
+                "center": [
+                    1511,
+                    771
+                ],
+                "server": 1,
+                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H4_DAMLB.json &\nwait"
             },
             "port": [
                 4,
@@ -832,21 +1026,21 @@
                     499,
                     283
                 ],
-                "numberPorts": 3
+                "numberPorts": 5
             },
             "endNode": {
                 "nameClass": "Switch",
                 "name": "S10",
                 "id": 10,
                 "center": [
-                    906,
-                    343
+                    904,
+                    393
                 ],
-                "numberPorts": 7
+                "numberPorts": 6
             },
             "port": [
-                3,
-                5
+                5,
+                6
             ],
             "bw": 100,
             "delay": 40,
@@ -863,118 +1057,17 @@
                     1299,
                     776
                 ],
-                "numberPorts": 3
+                "numberPorts": 5
             },
             "endNode": {
                 "nameClass": "Switch",
                 "name": "S9",
                 "id": 9,
                 "center": [
-                    901,
-                    705
-                ],
-                "numberPorts": 7
-            },
-            "port": [
-                3,
-                5
-            ],
-            "bw": 100,
-            "delay": 40,
-            "loss": 0,
-            "cost": 1.3
-        },
-        {
-            "id": 29,
-            "startNode": {
-                "nameClass": "Switch",
-                "name": "S3",
-                "id": 3,
-                "center": [
                     904,
-                    169
-                ],
-                "numberPorts": 4
-            },
-            "endNode": {
-                "nameClass": "Host",
-                "name": "H3",
-                "id": 3,
-                "ip": "10.0.0.3",
-                "mac": "00:00:00:00:00:03",
-                "numberPorts": 1,
-                "center": [
-                    1085,
-                    131
-                ],
-                "server": 0,
-                "command": "#!/bin/bash\niperf3 -c 10.0.0.4 -p 5000 -t 30 -i 1 -u -b 20M -P 10 &\nwait"
-            },
-            "port": [
-                4,
-                1
-            ],
-            "bw": 1000,
-            "delay": 1,
-            "loss": 0,
-            "cost": 1.0
-        },
-        {
-            "id": 30,
-            "startNode": {
-                "nameClass": "Switch",
-                "name": "S6",
-                "id": 6,
-                "center": [
-                    904,
-                    906
-                ],
-                "numberPorts": 4
-            },
-            "endNode": {
-                "nameClass": "Host",
-                "name": "H4",
-                "id": 4,
-                "ip": "10.0.0.4",
-                "mac": "00:00:00:00:00:04",
-                "numberPorts": 1,
-                "center": [
-                    1157,
-                    967
-                ],
-                "server": 1,
-                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H4_Round_Robin.json &\nwait"
-            },
-            "port": [
-                4,
-                1
-            ],
-            "bw": 1000,
-            "delay": 1,
-            "loss": 0,
-            "cost": 1.0
-        },
-        {
-            "id": 34,
-            "startNode": {
-                "nameClass": "Switch",
-                "name": "S1",
-                "id": 1,
-                "center": [
-                    316,
-                    520
+                    654
                 ],
                 "numberPorts": 6
-            },
-            "endNode": {
-                "nameClass": "Switch",
-                "name": "S9",
-                "id": 9,
-                "center": [
-                    901,
-                    705
-                ],
-                "numberPorts": 7
             },
             "port": [
                 5,
@@ -983,100 +1076,7 @@
             "bw": 100,
             "delay": 40,
             "loss": 0,
-            "cost": 2.5
-        },
-        {
-            "id": 36,
-            "startNode": {
-                "nameClass": "Switch",
-                "name": "S1",
-                "id": 1,
-                "center": [
-                    316,
-                    520
-                ],
-                "numberPorts": 6
-            },
-            "endNode": {
-                "nameClass": "Switch",
-                "name": "S10",
-                "id": 10,
-                "center": [
-                    906,
-                    343
-                ],
-                "numberPorts": 7
-            },
-            "port": [
-                6,
-                6
-            ],
-            "bw": 100,
-            "delay": 30,
-            "loss": 0,
-            "cost": 1.7
-        },
-        {
-            "id": 37,
-            "startNode": {
-                "nameClass": "Switch",
-                "name": "S10",
-                "id": 10,
-                "center": [
-                    906,
-                    343
-                ],
-                "numberPorts": 7
-            },
-            "endNode": {
-                "nameClass": "Switch",
-                "name": "S12",
-                "id": 12,
-                "center": [
-                    1511,
-                    520
-                ],
-                "numberPorts": 6
-            },
-            "port": [
-                7,
-                5
-            ],
-            "bw": 100,
-            "delay": 50,
-            "loss": 0,
-            "cost": 2.0
-        },
-        {
-            "id": 38,
-            "startNode": {
-                "nameClass": "Switch",
-                "name": "S12",
-                "id": 12,
-                "center": [
-                    1511,
-                    520
-                ],
-                "numberPorts": 6
-            },
-            "endNode": {
-                "nameClass": "Switch",
-                "name": "S9",
-                "id": 9,
-                "center": [
-                    901,
-                    705
-                ],
-                "numberPorts": 7
-            },
-            "port": [
-                6,
-                7
-            ],
-            "bw": 100,
-            "delay": 70,
-            "loss": 0,
-            "cost": 5.0
+            "cost": 1.3
         }
     ],
     "labels": []

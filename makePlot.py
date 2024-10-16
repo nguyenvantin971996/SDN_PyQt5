@@ -1,25 +1,38 @@
 import json
 import matplotlib.pyplot as plt
 import os
+import random
 
-font = {'size': 10}
+font = {'size': 14}
 plt.rc('font', **font)
-colors = ['red', 'deepskyblue', 'lime', 'brown', 'orange', 'blue', 'black', 'purple', 'yellow']
-markers = [ '+', 's', '^', 'D', 'v', 'x','o', 'o', 'o']
+colors = ['red', 'deepskyblue', 'lime', 'brown', 'orange', 'blue', 'black', 'purple', 'orangered']
+markers = [ '+', 's', '^', 'D', 'v', 'x','o', 'v', 'x']
 linestyles = ['solid', 'dashed', 'dotted', 'solid', 'dashed', 'dotted', 'solid', 'dashed', 'dotted']
 labels = ["ABC", "ACS", "AS", "BFA", "FA", "GA"]
+
+matplotlib_colors = list(plt.cm.colors.CSS4_COLORS)
+matplotlib_markers = ['.', ',', 'o', 'v', '^', '<', '>', '1', '2', '3', '4', 's', 'p', '*', 'h', 'H', '+', 'x', 'D', 'd']
+matplotlib_linestyles = ['-', '--', '-.', ':']
+
 plt.rcParams['savefig.dpi'] = 200
 plt.rcParams['savefig.bbox'] = 'tight'
 plt.rcParams['savefig.directory'] = '/home/tin/SDN_PyQt5/result'
 
 def makePlotChart(fileNames):
     fileNames = sorted(fileNames)
-    styles = {label: {'color': colors[i], 'marker': markers[i], 'linestyle': linestyles[i]} 
+    styles = {label: {'color': colors[i % len(colors)], 
+                  'marker': markers[i % len(markers)], 
+                  'linestyle': linestyles[i % len(linestyles)]} 
                   for i, label in enumerate(labels)}
     legend_lines = [None] * len(labels)
     legend_labels = [None] * len(labels)
     other_lines = []
     other_labels = []
+    n_cols = None
+    if len(fileNames)%3==0:
+        n_cols = 3
+    else:
+        n_cols = 2
     try:
         result = {}
         maxThr = 0
@@ -70,8 +83,7 @@ def makePlotChart(fileNames):
             if minThr >= min(throughputs):
                 minThr = min(throughputs)
             
-            result[fileName] = (ends[:50], throughputs[1:51], lossPercent[1:51], jitter[1:51], colors[i])
-
+            result[fileName] = (ends, throughputs, lossPercent, jitter)
         if isUDP:
             # fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 15))
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
@@ -79,19 +91,26 @@ def makePlotChart(fileNames):
             for i, fileName in enumerate(fileNames):
                 fileName0 = os.path.basename(fileName)
                 fileName = os.path.splitext(fileName0)[0]
-
                 if fileName in styles:
-                        style = styles[fileName]
-                        line, = ax1.plot(result[fileName][0], result[fileName][1], 
-                                        linewidth=2, linestyle=style['linestyle'], 
-                                        marker=style['marker'], markersize=7, 
-                                        label=fileName, color=style['color'])
-                        label_idx = labels.index(fileName)
-                        legend_lines[label_idx] = line
-                        legend_labels[label_idx] = fileName
+                    style = styles[fileName]
+                    line, = ax1.plot(result[fileName][0], result[fileName][1], 
+                                    linewidth=2, linestyle=style['linestyle'], 
+                                    marker=style['marker'], markersize=7, 
+                                    label=fileName, color=style['color'])
+                    label_idx = labels.index(fileName)
+                    legend_lines[label_idx] = line
+                    legend_labels[label_idx] = fileName
+                    
                 else:
-                    style = {'color': colors[default_color_idx], 'marker': markers[default_color_idx], 'linestyle': linestyles[default_color_idx]}
-                    default_color_idx += 1
+                    if default_color_idx < len(colors):
+                        style = {'color': colors[default_color_idx % len(colors)], 
+                                'marker': markers[default_color_idx % len(markers)], 
+                                'linestyle': linestyles[default_color_idx % len(linestyles)]}
+                        default_color_idx += 1
+                    else:
+                        style = {'color': random.choice(matplotlib_colors), 
+                        'marker': random.choice(matplotlib_markers), 
+                        'linestyle': random.choice(matplotlib_linestyles)}
 
                     line, = ax1.plot(result[fileName][0], result[fileName][1], 
                                         linewidth=2, linestyle=style['linestyle'], 
@@ -99,48 +118,46 @@ def makePlotChart(fileNames):
                                         label=fileName, color=style['color'])
                     other_lines.append(line)
                     other_labels.append(fileName)
-            ax1.legend(legend_lines + other_lines, legend_labels + other_labels, loc="upper right", ncol=3)
+                    styles[fileName] = style
+            valid_legend_lines = [line for line in legend_lines if line is not None]
+            valid_legend_labels = [label for line, label in zip(legend_lines, legend_labels) if line is not None]
+
+            combined_lines = valid_legend_lines + other_lines
+            combined_labels = valid_legend_labels + other_labels
+
+            if combined_lines and combined_labels:
+                ax1.legend(combined_lines, combined_labels, loc="upper right", ncol=n_cols)
             ax1.set_ylabel('Throughput (Mbps)')
             ax1.set_xlabel('Time (seconds)')
             ax1.grid()
             ax1.set_ylim(minThr * 0.5, maxThr * 1.2)
 
-            default_color_idx = len(labels)
             for i, fileName in enumerate(fileNames):
                 fileName0 = os.path.basename(fileName)
                 fileName = os.path.splitext(fileName0)[0]
 
-                if fileName in styles:
-                    style = styles[fileName]
-                else:
-                    style = {'color': colors[default_color_idx], 'marker': markers[default_color_idx], 'linestyle': linestyles[default_color_idx]}
-                    default_color_idx += 1
+                style = styles[fileName]
 
                 ax2.plot(result[fileName][0], result[fileName][2], 
                          linewidth=2, linestyle=style['linestyle'], 
                          marker=style['marker'], markersize=7, 
                          label=fileName, color=style['color'])
                 
-            ax2.legend(legend_lines + other_lines, legend_labels + other_labels, loc="upper right", ncol=3)
-            ax2.set_ylabel('Loss (%)')
+            ax2.legend(combined_lines, combined_labels, loc="upper right", ncol=n_cols)
+            ax2.set_ylabel('Packet loss rate (%)')
             ax2.set_xlabel('Time (seconds)')
             ax2.grid()
 
-            # default_color_idx = len(labels)
             # for i, fileName in enumerate(fileNames):
             #     fileName0 = os.path.basename(fileName)
             #     fileName = os.path.splitext(fileName0)[0]
-            #     if fileName in styles:
-            #         style = styles[fileName]
-            #     else:
-            #         style = {'color': colors[default_color_idx], 'marker': markers[default_color_idx], 'linestyle': linestyles[default_color_idx]}
-            #         default_color_idx += 1
+            #     style = styles[fileName]
 
             #     ax3.plot(result[fileName][0], result[fileName][3], 
             #              linewidth=2, linestyle=style['linestyle'], 
             #              marker=style['marker'], markersize=7, 
             #              label=fileName, color=style['color'])
-            # ax3.legend(legend_lines + other_lines, legend_labels + other_labels, loc="upper right", ncol=3)
+            # ax3.legend(combined_lines, combined_labels, loc="upper right", ncol=n_cols)
             # ax3.set_ylabel('Jitter (ms)')
             # ax3.set_xlabel('Time (seconds)')
             # ax3.grid()
@@ -166,8 +183,15 @@ def makePlotChart(fileNames):
                         legend_lines[label_idx] = line
                         legend_labels[label_idx] = fileName
                 else:
-                    style = {'color': colors[default_color_idx], 'marker': markers[default_color_idx], 'linestyle': linestyles[default_color_idx]}
-                    default_color_idx += 1
+                    if default_color_idx < len(colors):
+                        style = {'color': colors[default_color_idx % len(colors)], 
+                                'marker': markers[default_color_idx % len(markers)], 
+                                'linestyle': linestyles[default_color_idx % len(linestyles)]}
+                        default_color_idx += 1
+                    else:
+                        style = {'color': random.choice(matplotlib_colors), 
+                        'marker': random.choice(matplotlib_markers), 
+                        'linestyle': random.choice(matplotlib_linestyles)}
 
                     line, = ax1.plot(result[fileName][0], result[fileName][1], 
                                         linewidth=2, linestyle=style['linestyle'], 
@@ -175,7 +199,14 @@ def makePlotChart(fileNames):
                                         label=fileName, color=style['color'])
                     other_lines.append(line)
                     other_labels.append(fileName)
-            ax1.legend(legend_lines + other_lines, legend_labels + other_labels, loc="upper right", ncol=3)
+            valid_legend_lines = [line for line in legend_lines if line is not None]
+            valid_legend_labels = [label for line, label in zip(legend_lines, legend_labels) if line is not None]
+
+            combined_lines = valid_legend_lines + other_lines
+            combined_labels = valid_legend_labels + other_labels
+
+            if combined_lines and combined_labels:
+                ax1.legend(combined_lines, combined_labels, loc="upper right", ncol=n_cols)
             ax1.legend(loc="upper right")
             ax1.set_ylabel('Throughput (Mbps)')
             ax1.set_xlabel('Time (seconds)')
@@ -186,55 +217,44 @@ def makePlotChart(fileNames):
             plt.show()
 
     except Exception as e:
-        dataPerKey = {}
-        fileLabels = [os.path.splitext(os.path.basename(fileName))[0] for i, fileName in enumerate(fileNames)]
-        
+        dataPerFile = {}
+        fileLabels = [os.path.splitext(os.path.basename(fileName))[0] for fileName in fileNames]
+
         for idx, fileName in enumerate(fileNames):
             try:
                 with open(fileName, 'r') as file:
                     data = json.load(file)
-                    u = 0
-                    for key, values in data.items():
-                        if u % 2 == 0:
-                            if key not in dataPerKey:
-                                dataPerKey[key] = []
-                            dataPerKey[key].append((values, fileLabels[idx]))
-                        u += 1
+                    dataPerFile[fileLabels[idx]] = data
             except Exception as e:
-                print(f"Error reading file: {e}")
-                return
-        
-        numKeys = len(dataPerKey)
-        fig, axs = plt.subplots(numKeys, 1, figsize=(10, 5), squeeze=False)
+                print(f"Error reading file {fileName}: {e}")
+                continue
+
+        fig, ax = plt.subplots(figsize=(10, 5))
 
         default_color_idx = len(labels)
-        for i, (key, valuesList) in enumerate(dataPerKey.items()):
-            ax = axs[i, 0]
-            v = 0
-            for j, (values, label) in enumerate(valuesList):
-                v = len(values)
-                if label in styles:
-                    style = styles[label]
-                    line, = ax.plot(range(1, v+1), values, linewidth=2, linestyle=style['linestyle'], 
-                                    marker=style['marker'], markersize=7, label=label, color=style['color'])
-                    label_idx = labels.index(label)
-                    legend_lines[label_idx] = line
-                    legend_labels[label_idx] = label
-                else:
-                    style = {'color': colors[default_color_idx], 'marker': markers[default_color_idx], 'linestyle': linestyles[default_color_idx]}
-                    default_color_idx += 1
-                    line, = ax.plot(range(1, v+1), values, linewidth=2, linestyle=style['linestyle'], 
-                                    marker=style['marker'], markersize=7, label=label, color=style['color'])
-                    other_lines.append(line)
-                    other_labels.append(label)
 
-                ax.plot(range(1, v+1), values, linewidth=2, linestyle=style['linestyle'], 
-                        marker=style['marker'], markersize=7, label=label, color=style['color'])
-            ax.set_xticks(list(range(1, v+1)))
-            ax.legend(legend_lines + other_lines, legend_labels + other_labels, loc="upper right", ncol=3)
-            ax.set_title(f'{key}')
-            ax.set_ylabel('Total cost of all updated paths')
-            ax.set_xlabel('Time (seconds)')
-            ax.grid()
+        for label, values in dataPerFile.items():
+            if default_color_idx < len(colors):
+                style = {
+                    'color': colors[default_color_idx % len(colors)], 
+                    'marker': markers[default_color_idx % len(markers)], 
+                    'linestyle': linestyles[default_color_idx % len(linestyles)]
+                }
+                default_color_idx += 1
+            else:
+                style = {
+                    'color': random.choice(matplotlib_colors), 
+                    'marker': random.choice(matplotlib_markers), 
+                    'linestyle': random.choice(matplotlib_linestyles)
+                }
+            ax.plot(values, linewidth=2, 
+                    linestyle=style['linestyle'], marker=style['marker'], 
+                    markersize=7, label=label, color=style['color'])
+
+        ax.set_ylabel('Load balancing index')
+        ax.set_xlabel('Time (seconds)')
+        ax.legend(loc="upper center", ncol=n_cols)
+        ax.grid()
         fig.tight_layout()
         plt.show()
+

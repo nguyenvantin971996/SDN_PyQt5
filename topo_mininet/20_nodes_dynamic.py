@@ -85,17 +85,17 @@ def dynamicChanges(net):
 	while True:
 		for src, dst in current_down_links:
 			net.configLinkStatus(src, dst, 'up')
-			#info('Link between %s and %s brought UP.\n'%(src, dst))
+			info('Link between %s and %s brought UP.\n'%(src, dst))
 		current_down_links = []
 		next_links = []
-		for i in range(2):
-			next_link_index = (link_index + i * 4)%len(links_to_toggle)
+		for i in range(1):
+			next_link_index = (link_index + i * 2)%len(links_to_toggle)
 			next_links.append(links_to_toggle[next_link_index])
 		for src, dst in next_links:
 			net.configLinkStatus(src, dst, 'down')
-			#info('Link between %s and %s brought DOWN.\n'%(src, dst))
+			info('Link between %s and %s brought DOWN.\n'%(src, dst))
 			current_down_links.append((src, dst))
-		link_index = (link_index + 2*4)%len(links_to_toggle)
+		link_index = (link_index + 1*2)%len(links_to_toggle)
 		current_sleep = sleep_durations[sleep_index]
 		sleep(current_sleep)
 		sleep_index = (sleep_index + 1)%len(sleep_durations)
@@ -109,7 +109,7 @@ def topology():
 	makeTerm(net['H2'],cmd='bash traffic/H2.sh')
 	sleep(2)
 	makeTerm(net['H1'],cmd='bash traffic/H1.sh')
-	sleep(10)
+	sleep(5)
 	thread = Thread(target=dynamicChanges, args=(net,))
 	thread.start()
 	sleep(2)

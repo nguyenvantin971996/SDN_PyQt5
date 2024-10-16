@@ -7,9 +7,12 @@ from ryu.controller.handler import MAIN_DISPATCHER
 from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_3
 from ryu.lib import hub
+from math import pow
 from ryu.base.app_manager import lookup_service_brick
 from decimal import Decimal
 import setting
+import json
+import time
 
 CONF = cfg.CONF
 
@@ -28,6 +31,7 @@ class PortMonitor(app_manager.RyuApp):
         self.link_costs = {}
         self.stats_reply_event = hub.Event()
         self.outstanding_requests = 0
+        self.lbi_history = []
         self.monitor_thread = hub.spawn(self._monitor)
 
     def _monitor(self):
@@ -36,10 +40,45 @@ class PortMonitor(app_manager.RyuApp):
                 if self._wait_for_topology_monitor_ready():
                     self.collect_stats()
                     self.update_link_metrics()
+
+                    lbi = self.get_load_balancing_index()
+                    if lbi is not None and len(self.lbi_history) < 60:
+                        self.lbi_history.append(lbi)
+                    if len(self.lbi_history) == 60 :
+                        self.save_lbi_history_to_json("result/Round_Robin.json")
+
                 hub.sleep(setting.MONITOR_PERIOD)
             except Exception as e:
                 self.logger.error("Error in monitoring loop: %s", str(e))
                 continue
+    
+    def save_lbi_history_to_json(self, file_name="result/lbi_history.json"):
+        with open(file_name, 'w') as json_file:
+            json.dump(self.lbi_history, json_file, indent=4)
+
+    def calculate_load_balancing_index(self, utilizations):
+        if not utilizations or len(utilizations) == 0:
+            return None
+
+        n = len(utilizations)
+        sum_utilization = sum(utilizations)
+        sum_square_utilization = sum([pow(u, 2) for u in utilizations])
+
+        if sum_square_utilization == 0:
+            return 1
+
+        lbi = pow(sum_utilization, 2) / (n * sum_square_utilization)
+        return lbi
+
+    def get_load_balancing_index(self):
+        utilizations = []
+        for src in self.link_utilizations:
+            for dst in self.link_utilizations[src]:
+                utilization = self.link_utilizations[src][dst]
+                if utilization is not None:
+                    utilizations.append(utilization)
+
+        return self.calculate_load_balancing_index(utilizations)
 
     def _wait_for_topology_monitor_ready(self):
         if self.topology_monitor is None:
