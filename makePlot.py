@@ -5,7 +5,8 @@ import random
 
 font = {'size': 14}
 plt.rc('font', **font)
-colors = ['red', 'deepskyblue', 'lime', 'brown', 'orange', 'blue', 'black', 'purple', 'orangered']
+# colors = ['red', 'deepskyblue', 'lime', 'brown', 'orange', 'blue', 'black', 'purple', 'orangered']
+colors = ['red', 'deepskyblue', 'lime', 'brown', 'orange', 'blue', 'red', 'deepskyblue', 'lime']
 markers = [ '+', 's', '^', 'D', 'v', 'x','o', 'v', 'x']
 linestyles = ['solid', 'dashed', 'dotted', 'solid', 'dashed', 'dotted', 'solid', 'dashed', 'dotted']
 labels = ["ABC", "ACS", "AS", "BFA", "FA", "GA"]
@@ -251,7 +252,7 @@ def makePlotChart(fileNames):
                     linestyle=style['linestyle'], marker=style['marker'], 
                     markersize=7, label=label, color=style['color'])
 
-        ax.set_ylabel('Load balancing index')
+        ax.set_ylabel('Load balancing index (LBI)')
         ax.set_xlabel('Time (seconds)')
         ax.legend(loc="upper center", ncol=n_cols)
         ax.grid()

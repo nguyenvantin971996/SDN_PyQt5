@@ -959,7 +959,8 @@ class MainWindow(QMainWindow):
                                 c = False
 
                             for key in range(len(pths[0])):
-                                int_string = 'Path ' + str(key+1) + ': [' + ', '.join(map(str, pths[0][key])) + '], length = ' + str(pths[2][key]) + '\n'
+                                # int_string = 'Path ' + str(key+1) + ': [' + ', '.join(map(str, pths[0][key])) + '], length = ' + str(pths[2][key]) + '\n'
+                                int_string = 'Path ' + str(key+1) + ': [' + ', '.join(map(str, pths[0][key])) + ']' + '\n'
                                 terminalString += int_string
                             if len(pathsDict) > 1:
                                 side = '\n'
