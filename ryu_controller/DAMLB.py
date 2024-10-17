@@ -453,7 +453,7 @@ class MultiPathRouting(app_manager.RyuApp):
                 paths, paths_edges, pw = self.get_optimal_paths(h1[0], h2[0])
                 normalize_pw = self.make_normalized(pw)
                 weights = [int(round(i*10)) for i in normalize_pw]
-                src_dst = f"WRR: {proto_type.upper()} {src_ip} --> {dst_ip}"
+                src_dst = f"Using DAMLB: {proto_type.upper()} {src_ip} --> {dst_ip}"
                 streams = []
                 self.WRR[key] = 1
                 initial_index = self.select_nth_element(weights, 1)

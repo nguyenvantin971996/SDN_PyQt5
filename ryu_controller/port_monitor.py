@@ -42,10 +42,10 @@ class PortMonitor(app_manager.RyuApp):
                     self.update_link_metrics()
 
                     lbi = self.get_load_balancing_index()
-                    if lbi is not None and len(self.lbi_history) < 60:
+                    if lbi is not None and len(self.lbi_history) < 100:
                         self.lbi_history.append(lbi)
-                    if len(self.lbi_history) == 60 :
-                        self.save_lbi_history_to_json("result/Round_Robin.json")
+                    if len(self.lbi_history) == 100 :
+                        self.save_lbi_history_to_json("result/DAMLB.json")
 
                 hub.sleep(setting.MONITOR_PERIOD)
             except Exception as e:
