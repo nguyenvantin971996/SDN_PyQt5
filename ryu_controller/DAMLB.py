@@ -1,23 +1,17 @@
 from ryu.base import app_manager
 from ryu.controller import ofp_event
-from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
-from ryu.controller.handler import set_ev_cls
+from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, set_ev_cls
 from ryu.ofproto import ofproto_v1_3
-from ryu.lib.packet import packet
-from ryu.lib.packet import arp, tcp, udp
-from ryu.lib.packet import ethernet
-from ryu.lib.packet import ipv4
-from ryu.lib.packet import ipv6
-from ryu.app.wsgi import ControllerBase
-import copy
-import itertools
+from ryu.lib.packet import packet, arp, tcp, udp, ethernet, ipv4, ipv6
 from ryu import cfg
-from setting import K, MAX_CAPACITY
 from ryu.lib import hub
 from ryu.app.wsgi import WSGIApplication, ControllerBase, Response, route
+
 import json
 from decimal import Decimal
-from setting import UPDATE_PATHS_PERIOD
+import copy
+import itertools
+from setting import UPDATE_PATHS_PERIOD, K, MAX_CAPACITY
 
 from delay_monitor import DelayMonitor
 from port_monitor import PortMonitor
@@ -60,30 +54,27 @@ class MultiPathRouting(app_manager.RyuApp):
         self.flow_monitor: FlowMonitor = _kwargs['flow_monitor']
 
         # Инициализация таблиц и переменных
-        self.arp_table = {}
-        self.hosts = {}
-        self.paths_dict = {}
-        self.si_instances = {}
-        self.sw = 0
-        self.sum_pw = {}
-        self.t = 0
+        self.ip_to_mac_map = {}
+        self.hosts_map = {}
+        self.paths_cache = {}
+        self.switch_count = 0
         self.WRR = {}
 
         # Запуск фоновой задачи для маршрутизации
-        self.routing_background_thread = hub.spawn(self.routing_background)
+        self.adaptive_routing_thread = hub.spawn(self.adaptive_routing)
 
     # Обработка события при подключении нового коммутатора
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def _switch_features_handler(self, ev):
-        self.sw = self.sw +1
-        print ("switch_features_handler "+str(self.sw) + " is called")
+        self.switch_count = self.switch_count +1
+        print ("switch_features_handler "+str(self.switch_count) + " is called")
         datapath = ev.msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
                                           ofproto.OFPCML_NO_BUFFER)]
-        self.add_flow(datapath, 0, match, actions)
+        self.install_flow(datapath, 0, match, actions)
 
     # Обработка события прихода пакета на контроллер
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
@@ -106,14 +97,14 @@ class MultiPathRouting(app_manager.RyuApp):
         if pkt.get_protocol(ipv6.ipv6):
             match = parser.OFPMatch(eth_type=eth.ethertype)
             actions = []
-            self.add_flow(datapath, 1, match, actions)
+            self.install_flow(datapath, 1, match, actions)
             return None
 
-        src = eth.src
-        dst = eth.dst
+        mac_src = eth.src
+        mac_dst = eth.dst
         dpid = datapath.id
-        if src not in self.hosts:
-            self.hosts[src] = (dpid, in_port)
+        if mac_src not in self.hosts_map:
+            self.hosts_map[mac_src] = (dpid, in_port)
         out_port = ofproto.OFPP_FLOOD
 
         # Обработка ARP-запросов и ответов
@@ -121,26 +112,26 @@ class MultiPathRouting(app_manager.RyuApp):
             src_ip = arp_pkt.src_ip
             dst_ip = arp_pkt.dst_ip
             if arp_pkt.opcode == arp.ARP_REQUEST:
-                if dst_ip in self.arp_table:
-                    self.arp_table[src_ip] = src
-                    dst_mac = self.arp_table[dst_ip]
-                    h1 = self.hosts[src]
-                    h2 = self.hosts[dst_mac]
-                    paths, _, _ = self.get_optimal_paths(h1[0], h2[0])
-                    out_port = self.install_paths_arp(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip, paths)
+                if dst_ip in self.ip_to_mac_map:
+                    self.ip_to_mac_map[src_ip] = mac_src
+                    dst_mac = self.ip_to_mac_map[dst_ip]
+                    src_sw_in_port = self.hosts_map[mac_src]
+                    dst_sw_in_port = self.hosts_map[dst_mac]
+                    paths_nodes, _, _ = self.calculate_best_paths(src_sw_in_port[0], dst_sw_in_port[0])
+                    out_port = self.set_paths_arp_icmp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes)
 
-                    paths_reverse, _, _ = self.get_optimal_paths(h2[0], h1[0])
-                    self.install_paths_arp(h2[0], h2[1], h1[0], h1[1], dst_ip, src_ip, paths_reverse)
+                    paths_reverse, _, _ = self.calculate_best_paths(dst_sw_in_port[0], src_sw_in_port[0])
+                    self.set_paths_arp_icmp(dst_sw_in_port[0], dst_sw_in_port[1], src_sw_in_port[0], src_sw_in_port[1], dst_ip, src_ip, paths_reverse)
 
             elif arp_pkt.opcode == arp.ARP_REPLY:
-                self.arp_table[src_ip] = src
-                h1 = self.hosts[src]
-                h2 = self.hosts[dst]
-                paths, _, _ = self.get_optimal_paths(h1[0], h2[0])
-                out_port = self.install_paths_arp(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip, paths)
+                self.ip_to_mac_map[src_ip] = mac_src
+                src_sw_in_port = self.hosts_map[mac_src]
+                dst_sw_in_port = self.hosts_map[mac_dst]
+                paths_nodes, _, _ = self.calculate_best_paths(src_sw_in_port[0], dst_sw_in_port[0])
+                out_port = self.set_paths_arp_icmp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes)
 
-                paths_reverse, _, _ = self.get_optimal_paths(h2[0], h1[0])
-                self.install_paths_arp(h2[0], h2[1], h1[0], h1[1], dst_ip, src_ip, paths_reverse)
+                paths_reverse, _, _ = self.calculate_best_paths(dst_sw_in_port[0], src_sw_in_port[0])
+                self.set_paths_arp_icmp(dst_sw_in_port[0], dst_sw_in_port[1], src_sw_in_port[0], src_sw_in_port[1], dst_ip, src_ip, paths_reverse)
 
             actions = [parser.OFPActionOutput(out_port)]
             data = None
@@ -155,21 +146,21 @@ class MultiPathRouting(app_manager.RyuApp):
         if tcp_pkt or udp_pkt:
             src_ip = ip_pkt.src
             dst_ip = ip_pkt.dst
-            h1 = self.hosts[src]
-            h2 = self.hosts[dst]     
+            src_sw_in_port = self.hosts_map[mac_src]
+            dst_sw_in_port = self.hosts_map[mac_dst]     
             proto_type = 'tcp' if tcp_pkt else 'udp'
-            key = (h1[0], h1[1], h2[0], h2[1], proto_type)
-            if key not in list(self.paths_dict.keys()):
-                paths, paths_edges, pw = self.get_optimal_paths(h1[0], h2[0])
-                normalize_pw = self.make_normalized(pw)
-                weights = [int(round(i*10)) for i in normalize_pw]
+            key = (src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], proto_type)
+            if key not in list(self.paths_cache.keys()):
+                paths_nodes, paths_edges, paths_weights = self.calculate_best_paths(src_sw_in_port[0], dst_sw_in_port[0])
+                normalized_weights = self.normalize(paths_weights)
+                weights = [int(round(i*10)) for i in normalized_weights]
                 src_dst = f"Using DAMLB: {proto_type.upper()} {src_ip} --> {dst_ip}"
                 streams = []
                 self.WRR[key] = 1
-                initial_index = self.select_nth_element(weights, 1)
+                initial_index = self.weighted_periodic_distribution(weights, 1)
                 streams.append((initial_index, tcp_pkt, udp_pkt))
-                self.paths_dict[key] = [paths, paths_edges, pw, src_ip, dst_ip, src_dst, streams]
-                out_port = self.install_paths_ip(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip, paths, normalize_pw, initial_index, tcp_pkt, udp_pkt)
+                self.paths_cache[key] = [paths_nodes, paths_edges, paths_weights, src_ip, dst_ip, src_dst, streams]
+                out_port = self.set_paths_tcp_udp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes, normalized_weights, initial_index, tcp_pkt, udp_pkt)
 
                 actions = [parser.OFPActionOutput(out_port)]
                 data = None
@@ -181,13 +172,13 @@ class MultiPathRouting(app_manager.RyuApp):
                 datapath.send_msg(out)
 
             else:
-                [paths, paths_edges, pw, x1, x2, x3, streams] = self.paths_dict[key]
-                normalize_pw = self.make_normalized(pw)
-                weights = [int(round(i*10)) for i in normalize_pw]
+                [paths_nodes, paths_edges, paths_weights, x1, x2, x3, streams] = self.paths_cache[key]
+                normalized_weights = self.normalize(paths_weights)
+                weights = [int(round(i*10)) for i in normalized_weights]
                 self.WRR[key] += 1
-                next_index = self.select_nth_element(weights, self.WRR[key])
-                self.paths_dict[key][-1].append((next_index, tcp_pkt, udp_pkt))
-                out_port = self.install_paths_ip(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip, paths, normalize_pw, next_index, tcp_pkt, udp_pkt)
+                next_index = self.weighted_periodic_distribution(weights, self.WRR[key])
+                self.paths_cache[key][-1].append((next_index, tcp_pkt, udp_pkt))
+                out_port = self.set_paths_tcp_udp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes, normalized_weights, next_index, tcp_pkt, udp_pkt)
                 
                 actions = [parser.OFPActionOutput(out_port)]
                 data = None
@@ -199,8 +190,8 @@ class MultiPathRouting(app_manager.RyuApp):
                 datapath.send_msg(out)
 
     # Установка путей для ARP и ICMP
-    def install_paths_arp(self, src, first_port, dst, last_port, ip_src, ip_dst, paths):
-        paths_with_ports = self.add_ports_to_paths(paths, first_port, last_port)
+    def set_paths_arp_icmp(self, src, in_port_src_sw, dst, out_port_dst_sw, ip_src, ip_dst, paths_nodes):
+        paths_with_ports = self.paths_ports(paths_nodes, in_port_src_sw, out_port_dst_sw)
         selected_path = paths_with_ports[0]
         for node in selected_path:
             dp = self.topology_monitor.datapaths[node]
@@ -223,13 +214,13 @@ class MultiPathRouting(app_manager.RyuApp):
                 arp_tpa=ip_dst
             )         
             actions = [ofp_parser.OFPActionOutput(out_port)]
-            self.add_flow(dp, 1, match_ip, actions)
-            self.add_flow(dp, 1, match_arp, actions)
+            self.install_flow(dp, 1, match_ip, actions)
+            self.install_flow(dp, 1, match_arp, actions)
         return selected_path[src][1]
     
     # Удаление потоков по IP для TCP и UDP
-    def delete_paths_ip(self, src, first_port, dst, last_port, ip_src, ip_dst, paths, pw, index, tcp_pkt, udp_pkt):
-        paths_with_ports = self.add_ports_to_paths(paths, first_port, last_port)
+    def delete_paths_tcp_udp(self, src, in_port_src_sw, dst, out_port_dst_sw, ip_src, ip_dst, paths_nodes, paths_weights, index, tcp_pkt, udp_pkt):
+        paths_with_ports = self.paths_ports(paths_nodes, in_port_src_sw, out_port_dst_sw)
         selected_path = paths_with_ports[index]
         for node in selected_path:
             dp = self.topology_monitor.datapaths[node]
@@ -257,12 +248,12 @@ class MultiPathRouting(app_manager.RyuApp):
                         udp_src=udp_pkt.src_port,
                         udp_dst=udp_pkt.dst_port
                     )    
-            self.remove_flows(dp, match_ip, out_port)
+            self.delete_flow(dp, match_ip, out_port)
         return
     
     # Установка потоков по IP для TCP и UDP
-    def install_paths_ip(self, src, first_port, dst, last_port, ip_src, ip_dst, paths, pw, index, tcp_pkt, udp_pkt):
-        paths_with_ports = self.add_ports_to_paths(paths, first_port, last_port)
+    def set_paths_tcp_udp(self, src, in_port_src_sw, dst, out_port_dst_sw, ip_src, ip_dst, paths_nodes, paths_weights, index, tcp_pkt, udp_pkt):
+        paths_with_ports = self.paths_ports(paths_nodes, in_port_src_sw, out_port_dst_sw)
         selected_path = paths_with_ports[index]
         for node in selected_path:
             dp = self.topology_monitor.datapaths[node]
@@ -293,14 +284,14 @@ class MultiPathRouting(app_manager.RyuApp):
                         udp_dst=udp_pkt.dst_port
                     )      
             actions = [ofp_parser.OFPActionOutput(out_port)]    
-            self.add_flow(dp, 32768, match_ip, actions)
+            self.install_flow(dp, 32768, match_ip, actions)
         return selected_path[src][1]
 
     # Фоновая задача для обновления маршрутов
-    def routing_background(self):
+    def adaptive_routing(self):
         while True:
             self.rerouting()# Переназначение маршрутов
-            self.update_pw()# Обновление стоимости путей
+            self.update_weights_of_paths_cache()# Обновление стоимости путей
             hub.sleep(UPDATE_PATHS_PERIOD)
 
     # Функция переназначения маршрутов при перегрузке
@@ -310,7 +301,7 @@ class MultiPathRouting(app_manager.RyuApp):
             all_flows_overloaded = self.get_flows_overloaded(overloaded_links)
             link_costs = self.get_costs_to_adapt(overloaded_links, all_flows_overloaded)
             metric = self.port_monitor.get_link_costs()
-            tmp_paths_dict = copy.deepcopy(self.paths_dict)
+            tmp_paths_dict = copy.deepcopy(self.paths_cache)
             for key, path_info in tmp_paths_dict.items():
                 old_paths, old_paths_edges, old_pw, src_ip, dst_ip, src_dst, streams = copy.deepcopy(path_info)
                 streams_overloaded = []
@@ -326,9 +317,9 @@ class MultiPathRouting(app_manager.RyuApp):
                         if path_index not in paths_rerouting_index:
                             paths_rerouting_index.append(path_index)
                 src = key[0]
-                first_port = key[1]
+                in_port_src_sw = key[1]
                 dst = key[2]
-                last_port = key[3]
+                out_port_dst_sw = key[3]
                 new_k = len(paths_rerouting_index)
                 # Выбор алгоритма маршрутизации
                 # alg = YenAlgorithm(link_costs, src, dst, new_k)
@@ -339,22 +330,22 @@ class MultiPathRouting(app_manager.RyuApp):
                 # alg = FA(link_costs, src, dst, new_k, 10, 100, 1, 1, 1)
                 # alg = GA(link_costs, src, dst, new_k, 10, 100, 0.7, 0.7, 2)
                 new_paths, new_paths_edges, new_pw = alg.compute_shortest_paths()
-                paths, paths_edges, pw, x1, x2, x3, x4 = copy.deepcopy(path_info)
+                paths_nodes, paths_edges, paths_weights, x1, x2, x3, x4 = copy.deepcopy(path_info)
                 for idx in range(len(paths_rerouting_index)):
                     x = paths_rerouting_index[idx]
-                    paths[x] = copy.deepcopy(new_paths[idx])
+                    paths_nodes[x] = copy.deepcopy(new_paths[idx])
                     paths_edges[x] = copy.deepcopy(new_paths_edges[idx])
-                pw = copy.deepcopy(self.compute_pw(metric, paths_edges))
-                self.paths_dict[key][0] = paths
-                self.paths_dict[key][1] = paths_edges
-                self.paths_dict[key][2] = pw
-                normalize_pw = self.make_normalized(pw)
-                old_normalize_pw = self.make_normalized(old_pw)
+                paths_weights = copy.deepcopy(self.calculate_weights_of_paths(metric, paths_edges))
+                self.paths_cache[key][0] = paths_nodes
+                self.paths_cache[key][1] = paths_edges
+                self.paths_cache[key][2] = paths_weights
+                normalize_pw = self.normalize(paths_weights)
+                old_normalize_pw = self.normalize(old_pw)
                 for path_index, tcp_pkt, udp_pkt in streams_overloaded:
-                    self.delete_paths_ip(src, first_port, dst, last_port, src_ip, dst_ip,
+                    self.delete_paths_tcp_udp(src, in_port_src_sw, dst, out_port_dst_sw, src_ip, dst_ip,
                                         old_paths, old_normalize_pw, path_index, tcp_pkt, udp_pkt)
-                    self.install_paths_ip(src, first_port, dst, last_port, src_ip, dst_ip,
-                                        paths, normalize_pw, path_index, tcp_pkt, udp_pkt)
+                    self.set_paths_tcp_udp(src, in_port_src_sw, dst, out_port_dst_sw, src_ip, dst_ip,
+                                        paths_nodes, normalize_pw, path_index, tcp_pkt, udp_pkt)
 
     # Получение перегруженных каналов
     def get_overloaded_links(self):
@@ -443,21 +434,21 @@ class MultiPathRouting(app_manager.RyuApp):
         return link_costs
 
     # Добавление портов к путям
-    def add_ports_to_paths(self, paths, first_port, last_port):
+    def paths_ports(self, paths_nodes, in_port_src_sw, out_port_dst_sw):
         paths_p = []
-        for path in paths:
+        for path in paths_nodes:
             p = {}
-            in_port = first_port
+            in_port = in_port_src_sw
             for s1, s2 in zip(path[:-1], path[1:]):
                 out_port = self.topology_monitor.graph[s1][s2]['src_port']
                 p[s1] = (in_port, out_port)
                 in_port = self.topology_monitor.graph[s1][s2]['dst_port']
-            p[path[-1]] = (in_port, last_port)
+            p[path[-1]] = (in_port, out_port_dst_sw)
             paths_p.append(p)
         return paths_p
 
     # Удаление потока
-    def remove_flows(self, datapath, match, out_port):
+    def delete_flow(self, datapath, match, out_port):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         mod = parser.OFPFlowMod(datapath=datapath, command=ofproto.OFPFC_DELETE,
@@ -465,7 +456,7 @@ class MultiPathRouting(app_manager.RyuApp):
         datapath.send_msg(mod)
     
     # Добавление потока в коммутатор
-    def add_flow(self, datapath, priority, match, actions, buffer_id=None):
+    def install_flow(self, datapath, priority, match, actions, buffer_id=None):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
@@ -480,37 +471,37 @@ class MultiPathRouting(app_manager.RyuApp):
         datapath.send_msg(mod)
 
     # Вычисление стоимости путей
-    def compute_pw(self, metric, paths_edges):
-        pw = []
+    def calculate_weights_of_paths(self, metric, paths_edges):
+        paths_weights = []
         for path_edges in paths_edges:
             length = 0
             for edge in path_edges:
                 u = edge[0]
                 v = edge[1]
                 length += metric[u][v]
-            pw.append(float(length))
-        return pw
+            paths_weights.append(float(length))
+        return paths_weights
 
     # Нормализация стоимости путей
-    def make_normalized(self, pw):
-        pw = [100 if item == 0 else 1/item for item in pw]
-        total = sum(pw)
-        normalized_pw = [round(float(i)/total, 2) for i in pw]
-        normalized_pw[-1] += 1 - sum(normalized_pw)
-        normalized_pw[-1] = round(normalized_pw[-1], 2)
-        return normalized_pw
+    def normalize(self, paths_weights):
+        paths_weights = [100 if item == 0 else 1/item for item in paths_weights]
+        total = sum(paths_weights)
+        weights_after_normalizing = [round(float(i)/total, 2) for i in paths_weights]
+        weights_after_normalizing[-1] += 1 - sum(weights_after_normalizing)
+        weights_after_normalizing[-1] = round(weights_after_normalizing[-1], 2)
+        return weights_after_normalizing
 
     # Обновление стоимости путей
-    def update_pw(self):
+    def update_weights_of_paths_cache(self):
         metric = self.port_monitor.get_link_costs()
-        tmp_paths_dict = copy.deepcopy(self.paths_dict)
+        tmp_paths_dict = copy.deepcopy(self.paths_cache)
         for key, path_info in tmp_paths_dict.items():
-            paths, paths_edges, pw, x1, x2, x3, x4 = copy.deepcopy(path_info)
-            pw = copy.deepcopy(self.compute_pw(metric, paths_edges))
-            self.paths_dict[key][2] = pw
+            paths_nodes, paths_edges, paths_weights, x1, x2, x3, x4 = copy.deepcopy(path_info)
+            new_pw = copy.deepcopy(self.calculate_weights_of_paths(metric, paths_edges))
+            self.paths_cache[key][2] = new_pw
 
     # Выбор элемента на основе весов
-    def select_nth_element(self, weights, n):
+    def weighted_periodic_distribution(self, weights, n):
         if n <= 0:
             return None
         total_weights = sum(weights)
@@ -529,11 +520,11 @@ class MultiPathRouting(app_manager.RyuApp):
         return None
 
     # Получение оптимальных путей для пакетов
-    def get_optimal_paths(self, src, dst):
+    def calculate_best_paths(self, src, dst):
         metric = self.port_monitor.get_link_costs()
         alg = YenAlgorithm(metric, src, dst, K)
-        paths, paths_edges, pw = alg.compute_shortest_paths()
-        return paths, paths_edges, pw
+        paths_nodes, paths_edges, paths_weights = alg.compute_shortest_paths()
+        return paths_nodes, paths_edges, paths_weights
     
 class NetworkStatRest(ControllerBase):
 
@@ -570,15 +561,15 @@ class NetworkStatRest(ControllerBase):
         body = json.dumps(rm_bw)
         return Response(content_type='application/json', body=body, status=200)
     
-    @route('rest_api_app', '/paths', methods=['GET'])
+    @route('rest_api_app', '/paths_nodes', methods=['GET'])
     def get_paths(self, req, **kwargs):
-        paths_dict = {}
-        if len(self.app.paths_dict) != 0:
+        paths_cache = {}
+        if len(self.app.paths_cache) != 0:
             i = 0
-            for key, item in self.app.paths_dict.items():
+            for key, item in self.app.paths_cache.items():
                 if 'udp' in key:
                     itm = item[:6]
-                    paths_dict[i] = itm
+                    paths_cache[i] = itm
                     i += 1
-        body = json.dumps(paths_dict)
+        body = json.dumps(paths_cache)
         return Response(content_type='application/json', body=body, status=200)
