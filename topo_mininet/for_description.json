@@ -1,0 +1,142 @@
+{
+    "controllers": [],
+    "switches": [
+        {
+            "nameClass": "Switch",
+            "name": "S1",
+            "id": 1,
+            "center": [
+                562,
+                329
+            ],
+            "numberPorts": 1
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S2",
+            "id": 2,
+            "center": [
+                562,
+                723
+            ],
+            "numberPorts": 1
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S3",
+            "id": 3,
+            "center": [
+                1290,
+                526
+            ],
+            "numberPorts": 1
+        },
+        {
+            "nameClass": "Switch",
+            "name": "S4",
+            "id": 4,
+            "center": [
+                882,
+                526
+            ],
+            "numberPorts": 3
+        }
+    ],
+    "hosts": [],
+    "links": [
+        {
+            "id": 1,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S1",
+                "id": 1,
+                "center": [
+                    562,
+                    329
+                ],
+                "numberPorts": 1
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S4",
+                "id": 4,
+                "center": [
+                    882,
+                    526
+                ],
+                "numberPorts": 3
+            },
+            "port": [
+                1,
+                1
+            ],
+            "bw": 100,
+            "delay": 10,
+            "loss": 0,
+            "cost": 10.0
+        },
+        {
+            "id": 2,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S4",
+                "id": 4,
+                "center": [
+                    882,
+                    526
+                ],
+                "numberPorts": 3
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S2",
+                "id": 2,
+                "center": [
+                    562,
+                    723
+                ],
+                "numberPorts": 1
+            },
+            "port": [
+                2,
+                1
+            ],
+            "bw": 100,
+            "delay": 50,
+            "loss": 0,
+            "cost": 5.0
+        },
+        {
+            "id": 3,
+            "startNode": {
+                "nameClass": "Switch",
+                "name": "S4",
+                "id": 4,
+                "center": [
+                    882,
+                    526
+                ],
+                "numberPorts": 3
+            },
+            "endNode": {
+                "nameClass": "Switch",
+                "name": "S3",
+                "id": 3,
+                "center": [
+                    1290,
+                    526
+                ],
+                "numberPorts": 1
+            },
+            "port": [
+                3,
+                1
+            ],
+            "bw": 100,
+            "delay": 90,
+            "loss": 0,
+            "cost": 1.7
+        }
+    ],
+    "labels": []
+}
