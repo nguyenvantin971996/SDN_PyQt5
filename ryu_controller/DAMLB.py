@@ -25,7 +25,6 @@ from FA_static import FA
 from AS_static import AS
 from ACS_static import ACS
 from GA_static import GA
-
 CONF = cfg.CONF
 
 class MultiPathRouting(app_manager.RyuApp):
