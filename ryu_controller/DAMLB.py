@@ -321,8 +321,8 @@ class MultiPathRouting(app_manager.RyuApp):
                 out_port_dst_sw = key[3]
                 new_k = len(paths_rerouting_index)
                 # Выбор алгоритма маршрутизации
-                # alg = YenAlgorithm(link_costs, src, dst, new_k)
-                alg = ABC(link_costs, src, dst, new_k, 10, 100, 20)
+                alg = YenAlgorithm(link_costs, src, dst, new_k)
+                # alg = ABC(link_costs, src, dst, new_k, 10, 100, 20)
                 # alg = ACS(link_costs, src, dst, new_k, 10, 100, 0.1, 1, 2, 0.5, 1)
                 # alg = AS(link_costs, src, dst, new_k, 10, 100, 0.1, 1, 2, 1)
                 # alg = BFA(link_costs, src, dst, new_k, 10, 100, 0.7, 2, 2)
@@ -552,6 +552,12 @@ class NetworkStatRest(ControllerBase):
     def get_throughput(self, req, **kwargs):
         throughput = self.app.port_monitor.get_throughput()
         body = json.dumps(throughput)
+        return Response(content_type='application/json', body=body, status=200)
+
+    @route('rest_api_app', '/cost_2', methods=['GET'])
+    def get_link_costs_2(self, req, **kwargs):
+        cost_2 = self.app.port_monitor.get_link_costs_2()
+        body = json.dumps(cost_2)
         return Response(content_type='application/json', body=body, status=200)
     
     @route('rest_api_app', '/rm_bw', methods=['GET'])

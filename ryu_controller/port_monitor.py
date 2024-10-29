@@ -266,3 +266,14 @@ class PortMonitor(app_manager.RyuApp):
     # Получение данных о стоимости каналов
     def get_link_costs(self):
         return self.link_costs
+    
+    def get_link_costs_2(self):
+        link_costs_2 = {}
+        for src in self.topology_monitor.graph:
+            link_costs_2[src] = {}
+            for dst in self.topology_monitor.graph[src]:
+                try:
+                    link_costs_2[src][dst] = max(float(self.link_costs[src][dst]), float(self.link_costs[dst][src]))
+                except:
+                    link_costs_2[src][dst] = None
+        return link_costs_2

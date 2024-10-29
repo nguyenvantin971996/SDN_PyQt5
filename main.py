@@ -60,13 +60,13 @@ class dynamicMetric(QMainWindow):
         self.setCentralWidget(self.tabs)
 
         self.tab1 = QWidget()
-        self.tab2 = QWidget()
+        # self.tab2 = QWidget()
 
-        self.tabs.addTab(self.tab1, "Throughput (Mbps)")
-        self.tabs.addTab(self.tab2, "Latency (ms)")
+        self.tabs.addTab(self.tab1, "Cost")
+        # self.tabs.addTab(self.tab2, "Latency (ms)")
 
         self.tab1UI()
-        self.tab2UI()
+        # self.tab2UI()
 
         # self.tabs.currentChanged.connect(self.onTabChanged)
         
@@ -915,8 +915,8 @@ class MainWindow(QMainWindow):
                 except ValueError:
                     QMessageBox.warning(self, "Mininet", "Can not start Mininet!")
 
-                self.timer.timeout.connect(lambda: self.display_metrics(self.dynamicMetric.tableWidget1, 'throughput'))
-                self.timer.timeout.connect(lambda: self.display_metrics(self.dynamicMetric.tableWidget2, 'latency'))
+                self.timer.timeout.connect(lambda: self.display_metrics(self.dynamicMetric.tableWidget1, 'cost_2'))
+                # self.timer.timeout.connect(lambda: self.display_metrics(self.dynamicMetric.tableWidget2, 'latency'))
                 
                 self.timer.timeout.connect(self.get_paths)
                 updateInterval = 2000
