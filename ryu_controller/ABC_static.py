@@ -28,6 +28,10 @@ class ABC:
         self.best = []  # Лучшие решения
 
         self.limit = limit  # Порог для обновления решения
+
+        # Инициализация списков для хранения значений
+        self.best_fitness_per_iteration = []
+        self.mean_fitness_per_iteration = []
     
     def get_fitness_max(self):
         # Вычисление максимальной приспособленности (сумма всех весов в графе)
@@ -35,7 +39,7 @@ class ABC:
         for k1 in self.weight_map.keys():
             for k2 in self.weight_map[k1].keys():
                 s += self.weight_map[k1][k2][1]
-        return s/0.01
+        return s*100
 
     def create_solution(self):
         # Создание нового решения
@@ -80,7 +84,7 @@ class ABC:
                     min_remain_bw = self.weight_map[current_switch][next_switch][0]
                     
             if min_remain_bw == 0:
-                return total_weight/0.01
+                return total_weight*100
             else:
                 return total_weight*100/min_remain_bw
     
@@ -169,6 +173,9 @@ class ABC:
             if not any(np.array_equal(solution.path, candidate.path) for candidate in candidates):
                 candidates.append(copy.deepcopy(solution))
 
+        # total_k_fitness = sum(sol.fitness for sol in candidates) + (self.K - len(candidates)) * self.fitness_max
+        # self.best_fitness_per_iteration.append(total_k_fitness)
+        
         for candidate in candidates:
             if len(self.best) < self.K:
                 self.best.append(copy.deepcopy(candidate))  # Добавление лучшего решения
@@ -202,10 +209,16 @@ class ABC:
             self.onlooker_phase()
             self.scout_phase()
             self.compare_best()
+        
+        # Обновление значений для отображения графиков
+        # total_k_fitness = sum(sol.fitness for sol in self.best) + (self.K - len(self.best)) * self.fitness_max
+        # self.best_fitness_per_iteration.append(total_k_fitness)
+        mean_fitness = np.mean([solution.fitness for solution in self.population])
+        self.mean_fitness_per_iteration.append(mean_fitness)
 
         # Возвращение кратчайших путей, ребер и их длины
         vertices_paths = [solution.path.tolist() for solution in self.best]
         edges_paths = self.compute_edges_of_paths(vertices_paths)
         length_paths = [float(solution.fitness) for solution in self.best]
         
-        return vertices_paths, edges_paths, length_paths
+        return vertices_paths, edges_paths, length_paths, self.best_fitness_per_iteration, self.mean_fitness_per_iteration
