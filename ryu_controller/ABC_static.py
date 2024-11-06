@@ -34,8 +34,8 @@ class ABC:
         s = 0
         for k1 in self.weight_map.keys():
             for k2 in self.weight_map[k1].keys():
-                s += self.weight_map[k1][k2]
-        return s
+                s += self.weight_map[k1][k2][1]
+        return s/0.01
 
     def create_solution(self):
         # Создание нового решения
@@ -68,13 +68,21 @@ class ABC:
             return self.fitness_max
         else:
             total_weight = 0
+            min_remain_bw = 100
             # Суммирование весов всех ребер в пути
             for i in range(len(path) - 1):
                 current_switch = path[i]
                 next_switch = path[i + 1]
-                weight = self.weight_map[current_switch][next_switch]
+                weight = self.weight_map[current_switch][next_switch][1]
                 total_weight += weight
-            return total_weight
+
+                if min_remain_bw > self.weight_map[current_switch][next_switch][0]:
+                    min_remain_bw = self.weight_map[current_switch][next_switch][0]
+                    
+            if min_remain_bw == 0:
+                return total_weight/0.01
+            else:
+                return total_weight*100/min_remain_bw
     
     def normalize(self, code):
         # Нормализация кодов между -1 и 1

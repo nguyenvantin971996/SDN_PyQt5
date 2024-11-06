@@ -39,8 +39,8 @@ class ACS:
         s = 0
         for k1 in self.weight_map.keys():
             for k2 in self.weight_map[k1].keys():
-                s += self.weight_map[k1][k2]
-        return s
+                s += self.weight_map[k1][k2][1]
+        return s/0.01
     
     def find_Lnn(self):
         # Нахождение эвристической длины кратчайшего пути с жадным алгоритмом
@@ -51,7 +51,7 @@ class ACS:
             neighbors = {k: v for k, v in self.weight_map[current_switch].items() if k not in path}
             if not neighbors:
                 return self.fitness_max  # Если нет соседей, возвращаем максимальную приспособленность
-            next_switch, _ = min(neighbors.items(), key=lambda x: x[1])  # Выбор наименьшего по весу соседа
+            next_switch, _ = min(neighbors.items(), key=lambda x: x[1][1])  # Выбор наименьшего по весу соседа
             current_switch = next_switch
             path.append(current_switch)
         return self.evaluate(path)  # Оценка длины пути
@@ -94,7 +94,7 @@ class ACS:
         probabilities = np.zeros(len(neighbor_switches))
         for i, sw in enumerate(neighbor_switches):
             x = self.pheromone[current_switch][sw]  # Уровень феромона
-            y = float(1 / self.weight_map[current_switch][sw])  # Обратное значение веса
+            y = float(1 / self.weight_map[current_switch][sw][1])  # Обратное значение веса
             probabilities[i] = x ** self.a * y ** self.b  # Вычисление вероятности на основе феромона и веса
         probabilities /= probabilities.sum()  # Нормализация вероятностей
         sw_max = neighbor_switches[np.argmax(probabilities)]  # Выбор узла с максимальной вероятностью
@@ -109,21 +109,29 @@ class ACS:
 
     def local_pheromone_update(self, current_switch, next_switch):
         # Локальное обновление уровня феромона
-        self.pheromone[current_switch][next_switch] = (self.pheromone[current_switch][next_switch] * (1 - self.p) + self.p * self.t0)
+        self.pheromone[current_switch][next_switch] = self.pheromone[current_switch][next_switch] * (1 - self.p) + self.p * self.t0
 
     def evaluate(self, path):
-        # Оценка длины пути (приспособленности)
+        # Оценка приспособленности (длины пути)
         if len(path) == 0:
             return self.fitness_max
         else:
             total_weight = 0
-            # Суммирование весов всех ребер пути
+            min_remain_bw = 100
+            # Суммирование весов всех ребер в пути
             for i in range(len(path) - 1):
                 current_switch = path[i]
                 next_switch = path[i + 1]
-                weight = self.weight_map[current_switch][next_switch]
+                weight = self.weight_map[current_switch][next_switch][1]
                 total_weight += weight
-            return total_weight
+
+                if min_remain_bw > self.weight_map[current_switch][next_switch][0]:
+                    min_remain_bw = self.weight_map[current_switch][next_switch][0]
+                    
+            if min_remain_bw == 0:
+                return total_weight/0.01
+            else:
+                return total_weight*100/min_remain_bw
     
     def global_pheromone_update(self):
         # Глобальное обновление уровня феромона по наилучшему решению
