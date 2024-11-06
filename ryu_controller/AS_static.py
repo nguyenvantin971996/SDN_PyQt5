@@ -185,7 +185,7 @@ class AS:
         # Обновление значений для отображения графиков
         # total_k_fitness = sum(sol.fitness for sol in self.best) + (self.K - len(self.best)) * self.fitness_max
         # self.best_fitness_per_iteration.append(total_k_fitness)
-        mean_fitness = np.mean([solution.fitness for solution in self.population])
+        mean_fitness = np.mean([solution.fitness for solution in self.colony])
         self.mean_fitness_per_iteration.append(mean_fitness)
 
         # Возвращение кратчайших путей, ребер и их длины
