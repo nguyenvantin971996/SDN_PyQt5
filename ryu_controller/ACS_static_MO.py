@@ -8,9 +8,9 @@ class Ant(object):
         self.fitness = np.inf
         self.delta = 0
 
-class AS:
-    def __init__(self, weight_map, src, dst, K, N, Max, p, a, b, Q):
-        # Инициализация параметров алгоритма муравьиной системы
+class ACS:
+    def __init__(self, weight_map, src, dst, K, N, Max, p, a, b, q0, Q):
+        # Инициализация параметров алгоритма системы муравьиной колонии
         self.weight_map = weight_map  # Граф
         self.switches = np.array(list(weight_map.keys()))  # Вершины графа
         self.src = src  # Исходная вершина
@@ -24,13 +24,14 @@ class AS:
         self.p = p  # Коэффициент испарения феромона
         self.a = a  # Влияние феромона на выбор пути
         self.b = b  # Влияние длины пути на выбор
-        self.Q = Q  # Константа для обновления феромона
+        self.q0 = q0  # Коэффициент жадности
+        self.Q = Q  # Интенсивность феромона
 
         self.colony = [Ant() for i in range(self.N)]  # Инициализация колонии муравьев
         self.candidates = []
-        self.best = []  # Лучшие пути
+        self.best = []  # Лучшие решения
         self.Lnn = self.find_Lnn()  # Эвристическое значение Lnn (длина кратчайшего пути)
-        self.t0 = 1 / (len(self.switches) * self.Lnn)  # Начальная концентрация феромона
+        self.t0 = 1/(len(self.switches) * self.Lnn)  # Начальная концентрация феромона
         self.pheromone = self.create_pheromone()  # Матрица феромонов
 
         # Инициализация списков для хранения значений
@@ -38,12 +39,12 @@ class AS:
         self.mean_fitness_per_iteration = []
     
     def get_fitness_max(self):
-        # Вычисление максимальной приспособленности (сумма всех весов в графе)
+        # Расчет максимальной приспособленности (сумма всех весов графа)
         s = 0
         for k1 in self.weight_map.keys():
             for k2 in self.weight_map[k1].keys():
-                s += self.weight_map[k1][k2]
-        return s
+                s += self.weight_map[k1][k2][1]
+        return s*100
     
     def find_Lnn(self):
         # Нахождение эвристической длины кратчайшего пути с жадным алгоритмом
@@ -54,7 +55,7 @@ class AS:
             neighbors = {k: v for k, v in self.weight_map[current_switch].items() if k not in path}
             if not neighbors:
                 return self.fitness_max  # Если нет соседей, возвращаем максимальную приспособленность
-            next_switch, _ = min(neighbors.items(), key=lambda x: x[1])  # Выбор наименьшего по весу соседа
+            next_switch, _ = min(neighbors.items(), key=lambda x: x[1][1])  # Выбор наименьшего по весу соседа
             current_switch = next_switch
             path.append(current_switch)
         return self.evaluate(path)  # Оценка длины пути
@@ -97,11 +98,22 @@ class AS:
         probabilities = np.zeros(len(neighbor_switches))
         for i, sw in enumerate(neighbor_switches):
             x = self.pheromone[current_switch][sw]  # Уровень феромона
-            y = float(1 / self.weight_map[current_switch][sw])  # Обратное значение веса
+            y = float(1 / self.weight_map[current_switch][sw][1])  # Обратное значение веса
             probabilities[i] = x ** self.a * y ** self.b  # Вычисление вероятности на основе феромона и веса
         probabilities /= probabilities.sum()  # Нормализация вероятностей
-        next_switch = np.random.choice(neighbor_switches, p=probabilities)  # Случайный выбор узла на основе вероятностей
+        sw_max = neighbor_switches[np.argmax(probabilities)]  # Выбор узла с максимальной вероятностью
+        
+        if np.random.rand() <= self.q0:
+            next_switch = sw_max  # Жадный выбор на основе вероятности q0
+        else:
+            # Случайный выбор узла на основе вероятностей
+            next_switch = np.random.choice(neighbor_switches, p=probabilities)
+            self.local_pheromone_update(current_switch, next_switch)  # Локальное обновление феромона
         return next_switch
+
+    def local_pheromone_update(self, current_switch, next_switch):
+        # Локальное обновление уровня феромона
+        self.pheromone[current_switch][next_switch] = self.pheromone[current_switch][next_switch] * (1 - self.p) + self.p * self.t0
 
     def evaluate(self, path):
         # Оценка приспособленности (длины пути)
@@ -109,24 +121,31 @@ class AS:
             return self.fitness_max
         else:
             total_weight = 0
+            min_remain_bw = 100
             # Суммирование весов всех ребер в пути
             for i in range(len(path) - 1):
                 current_switch = path[i]
                 next_switch = path[i + 1]
-                weight = self.weight_map[current_switch][next_switch]
+                weight = self.weight_map[current_switch][next_switch][1]
                 total_weight += weight
-            return total_weight
+
+                if min_remain_bw > self.weight_map[current_switch][next_switch][0]:
+                    min_remain_bw = self.weight_map[current_switch][next_switch][0]
+                    
+            if min_remain_bw == 0:
+                return total_weight*100
+            else:
+                return total_weight*100/min_remain_bw
     
-    def update_pheromone(self):
-        # Обновление уровня феромонов на каждом ребре
-        for sw_1, neighbors in self.pheromone.items():
-            for sw_2 in neighbors:
-                self.pheromone[sw_1][sw_2] *= (1 - self.p)  # Испарение феромона
-        for ant in self.colony:
-            for j in range(len(ant.path) - 1):
-                p1, p2 = ant.path[j], ant.path[j + 1]
-                # Добавление нового феромона, оставленного муравьем
-                self.pheromone[p1][p2] += ant.delta
+    def global_pheromone_update(self):
+        # Глобальное обновление уровня феромона по наилучшему решению
+        self.colony.sort(key=lambda ant: ant.fitness)  # Сортировка муравьев по приспособленности
+        best_ant = self.colony[0]  # Наилучший муравей
+        for i in range(len(best_ant.path) - 1):
+            p1 = best_ant.path[i]
+            p2 = best_ant.path[i + 1]
+            # Глобальное обновление феромона
+            self.pheromone[p1][p2] = (1 - self.p) * self.pheromone[p1][p2] + self.p * best_ant.delta
      
     def compare_best(self):
         # Сравнение решений и выбор лучших путей
@@ -166,12 +185,12 @@ class AS:
             edges = [(vertices[i], vertices[i + 1]) for i in range(len(vertices) - 1)]
             edges_of_paths.append(edges)
         return edges_of_paths
-                
+        
     def compute_shortest_paths(self):
-        # Основной цикл выполнения алгоритма муравьиной системы
+        # Основной цикл выполнения алгоритма системы муравьиной колонии
         for iteration in range(self.Max):
             self.create_path()  # Создание путей для всех муравьев
-            self.update_pheromone()  # Обновление уровня феромонов
+            self.global_pheromone_update()  # Глобальное обновление феромонов
             self.compare_best()  # Сравнение и выбор лучших путей
 
             # Обновление значений для отображения графиков

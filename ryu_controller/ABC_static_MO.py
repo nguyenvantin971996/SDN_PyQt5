@@ -3,15 +3,15 @@ import copy
 
 class Solution(object):
     def __init__(self):
-        # Инициализация решения: путь, приспособленность, код
+        # Инициализация решения: путь, приспособленность, код, счетчик
         self.path = np.array([], dtype=int)
         self.fitness = np.inf
         self.code = np.array([], dtype=float)
+        self.counter = 0
 
-class FA:
-
-    def __init__(self, weight_map, src, dst, K, N, Max, y, a0, b0, modify=False):
-        # Инициализация параметров алгоритма светлячков
+class ABC:
+    def __init__(self, weight_map, src, dst, K, N, Max, limit):
+        # Инициализация параметров алгоритма искусственной пчелиной колонии
         self.weight_map = weight_map  # Граф
         self.switches = np.array(list(weight_map.keys()))  # Вершины графа
         self.src = src  # Исходная вершина
@@ -22,30 +22,25 @@ class FA:
 
         self.N = N  # Размер популяции
         self.Max = Max  # Максимальное количество итераций
-        self.y = y  # Коэффициент поглощения света
-        self.a0 = a0  # Параметр, контролирующий случайные шаги
-        self.b0 = b0  # Базовый коэффициент яркости светлячков
-        self.a = 0  # Текущий параметр, контролирующий случайные шаги
 
-        self.modify = modify  # Флаг модификации поведения светлячков
-        
-        # Инициализация популяции светлячков
-        self.population = [self.create_solution() for i in range(self.N)]
+        self.population = []  # Популяция решений
         self.candidates = []
         self.best = []  # Лучшие решения
+
+        self.limit = limit  # Порог для обновления решения
 
         # Инициализация списков для хранения значений
         self.best_fitness_per_iteration = []
         self.mean_fitness_per_iteration = []
-
+    
     def get_fitness_max(self):
         # Вычисление максимальной приспособленности (сумма всех весов в графе)
         s = 0
         for k1 in self.weight_map.keys():
             for k2 in self.weight_map[k1].keys():
-                s += self.weight_map[k1][k2]
-        return s
-    
+                s += self.weight_map[k1][k2][1]
+        return s*100
+
     def create_solution(self):
         # Создание нового решения
         newSolution = Solution()
@@ -64,8 +59,8 @@ class FA:
             # Поиск соседей, которые еще не посещены
             neighbor_switches = np.setdiff1d(list(self.weight_map[current_switch].keys()), path)
             if neighbor_switches.size == 0:
-                return np.array([], dtype=int)  # Возврат пустого пути, если нет доступных соседей
-            # Выбор вершины с минимальным значением в коде
+                return np.array([], dtype=int)  # Если не осталось доступных соседей, возвращаем пустой путь
+            # Выбор вершины с минимальным кодом
             switch_min = neighbor_switches[np.argmin(code[neighbor_switches - 1])]
             current_switch = switch_min
             path.append(current_switch)
@@ -77,13 +72,21 @@ class FA:
             return self.fitness_max
         else:
             total_weight = 0
+            min_remain_bw = 100
             # Суммирование весов всех ребер в пути
             for i in range(len(path) - 1):
                 current_switch = path[i]
                 next_switch = path[i + 1]
-                weight = self.weight_map[current_switch][next_switch]
+                weight = self.weight_map[current_switch][next_switch][1]
                 total_weight += weight
-            return total_weight
+
+                if min_remain_bw > self.weight_map[current_switch][next_switch][0]:
+                    min_remain_bw = self.weight_map[current_switch][next_switch][0]
+                    
+            if min_remain_bw == 0:
+                return total_weight*100
+            else:
+                return total_weight*100/min_remain_bw
     
     def normalize(self, code):
         # Нормализация кодов между -1 и 1
@@ -92,54 +95,81 @@ class FA:
         normalized_code = -1 + 2 * (code - mn) / (mx - mn)
         return normalized_code
 
-    def attract(self):
-        # Основной цикл притяжения светлячков друг к другу
-        if self.modify:
-            # Модифицированная версия притяжения
-            for i in range(self.N):
-                for j in range(self.N):
-                    new_code = self.population[i].code
-                    if self.population[i].fitness > self.population[j].fitness:
-                        # Вычисление притяжения на основе расстояния и интенсивности света
-                        r2 = np.sum((self.population[i].code - self.population[j].code) ** 2)
-                        b = self.b0 * np.exp(-self.y * r2)
-                        new_code += b * (self.population[j].code - self.population[i].code)
-                    # Добавление случайного шума
-                    e = np.random.rand(self.switches.size) - 0.5
-                    new_code += self.a * 2 * e
-                    new_code = self.normalize(new_code)
-                    new_solution = Solution()
-                    new_solution.code = new_code
-                    new_solution.path = self.decode(new_code)
-                    new_solution.fitness = self.evaluate(new_solution.path)
-                    self.population[i] = new_solution
-        else:
-            # Оригинальная версия притяжения
-            for i in range(self.N):
-                for j in range(self.N):
-                    new_code = self.population[i].code
-                    if self.population[i].fitness > self.population[j].fitness:
-                        r2 = np.sum((self.population[i].code - self.population[j].code) ** 2)
-                        b = self.b0 * np.exp(-self.y * r2)
-                        new_code += b * (self.population[j].code - self.population[i].code)
-                        # Добавление случайного шума
-                        e = np.random.rand(self.switches.size) - 0.5
-                        new_code += self.a * 2 * e
-                        new_code = self.normalize(new_code)
-                        new_solution = Solution()
-                        new_solution.code = new_code
-                        new_solution.path = self.decode(new_code)
-                        new_solution.fitness = self.evaluate(new_solution.path)
-                        self.population[i] = new_solution
-                    
+    def initialization_phase(self):
+        # Фаза инициализации: создание начальной популяции
+        self.population = [self.create_solution() for i in range(self.N)]
+    
+    def employed_phase(self):
+        # Фаза рабочих пчел
+        for i in range(self.N):
+            # Выбор случайного решения
+            choices = np.arange(self.N)
+            choices = np.delete(choices, i)
+            coceg = np.random.choice(choices)
+
+            solution = self.population[i]
+            new_code = np.copy(solution.code)
+            d = np.random.randint(self.switches.size)  # Выбор случайного индекса
+            fi = np.random.uniform(-1, 1)
+
+            # Модификация кода
+            new_code[d] = solution.code[d] + fi * (solution.code[d] - self.population[coceg].code[d])
+            new_code = self.normalize(new_code)  # Нормализация нового кода
+            new_path = self.decode(new_code)  # Декодирование нового пути
+            new_fitness = self.evaluate(new_path)  # Оценка нового пути
+            if new_fitness < solution.fitness:
+                # Обновление решения, если новое лучше
+                solution.code = new_code
+                solution.path = new_path
+                solution.fitness = new_fitness
+                solution.counter = 0
+            else:
+                solution.counter += 1
+
+    def onlooker_phase(self):
+        # Фаза пчел-наблюдателей: выбор решения на основе вероятностей
+        fitness_vector = np.array([1.0 / (1.0 + float(solution.fitness))  for solution in self.population])
+        total_fitness = np.sum(fitness_vector)
+        prob = fitness_vector / total_fitness  # Вероятность выбора решения
+        
+        for i in range(self.N):
+            index_solution = np.random.choice(np.arange(self.N), p=prob)  # Выбор решения на основе вероятности
+            choices = np.arange(self.N)
+            choices = np.delete(choices, index_solution)
+            coceg = np.random.choice(choices)
+            
+            solution = self.population[index_solution]
+            new_code = np.copy(solution.code)
+            d = np.random.randint(self.switches.size)  # Случайный индекс
+            fi = np.random.uniform(-1, 1)
+
+            # Модификация кода
+            new_code[d] = solution.code[d] + fi * (solution.code[d] - self.population[coceg].code[d])
+            new_code = self.normalize(new_code)  # Нормализация кода
+            new_path = self.decode(new_code)  # Декодирование пути
+            new_fitness = self.evaluate(new_path)
+            if new_fitness < solution.fitness:
+                # Обновление, если решение лучше
+                solution.code = new_code
+                solution.path = new_path
+                solution.fitness = new_fitness
+                solution.counter = 0
+            else:
+                solution.counter += 1
+
+    def scout_phase(self):
+        # Фаза пчел-разведчиков: замена решений, которые не улучшаются
+        for i in range(self.N):
+            if self.population[i].counter > self.limit:
+                self.population[i] = self.create_solution()  # Замена решения
+
     def compare_best(self):
-        # Сравнение решений и выбор лучших путей
-        self.population.sort(key=lambda x: x.fitness)  # Сортировка популяции по приспособленности
+        # Сравнение решений и выбор лучших
+        self.population.sort(key=lambda x: x.fitness)
         candidates = []
         for solution in self.population:
             if len(candidates) >= self.K:
                 break
-            # Проверка на уникальность путей
             if not any(np.array_equal(solution.path, candidate.path) for candidate in candidates):
                 candidates.append(copy.deepcopy(solution))
 
@@ -148,10 +178,10 @@ class FA:
         
         for candidate in candidates:
             if len(self.best) < self.K:
-                self.best.append(copy.deepcopy(candidate))  # Добавление лучших путей в список
+                self.best.append(copy.deepcopy(candidate))  # Добавление лучшего решения
                 self.best.sort(key=lambda x: x.fitness)
+
             else:
-                # Замена решения, если найдено лучшее
                 for id in range(len(self.best)):
                     if (not any(np.array_equal(candidate.path, solution.path) for solution in self.best)) and candidate.fitness < self.best[id].fitness:
                         self.best[id] = copy.deepcopy(candidate)
@@ -172,13 +202,14 @@ class FA:
         return edges_of_paths
 
     def compute_shortest_paths(self):
-        # Основной цикл выполнения алгоритма светлячков
+        # Основной цикл выполнения алгоритма искусственной пчелиной колонии
+        self.initialization_phase()
         for iteration in range(self.Max):
-            # Постепенное уменьшение a0
-            self.a = self.a0 * pow(1, iteration)
-            self.attract()  # Притяжение светлячков друг к другу
-            self.compare_best()  # Сравнение лучших решений
-
+            self.employed_phase()
+            self.onlooker_phase()
+            self.scout_phase()
+            self.compare_best()
+        
             # Обновление значений для отображения графиков
             total_k_fitness = sum(sol.fitness for sol in self.best) + (self.K - len(self.best)) * self.fitness_max
             self.best_fitness_per_iteration.append(total_k_fitness)
