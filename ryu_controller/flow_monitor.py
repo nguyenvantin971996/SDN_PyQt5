@@ -32,6 +32,11 @@ class FlowMonitor(app_manager.RyuApp):
             try:
                 for datapath in self.topology_monitor.datapaths.values():
                     self._request_stats(datapath)  # Отправка запросов статистики потоков
+                # self.show(7,2)
+                # self.show(3,2)
+                # self.show(2,4)
+                # self.show(4,8)
+                # print("=========================================================")
                 hub.sleep(setting.FLOW_PERIOD)  # Отправка запросов статистики потоков
             except Exception as e:
                 self.logger.error("Error in monitoring loop: %s", str(e))
@@ -139,3 +144,10 @@ class FlowMonitor(app_manager.RyuApp):
                 if link['src_port'] == out_port:
                     return dst_dpid
         return None
+    
+    def show(self, src, dst):
+        if src in self.switch_to_switch_flows_speed:
+            if dst in self.switch_to_switch_flows_speed[src]:
+                for key in self.switch_to_switch_flows_speed[src][dst].keys():
+                    if key[0] == 17:
+                        print((src, dst), self.switch_to_switch_flows_speed[src][dst][key])

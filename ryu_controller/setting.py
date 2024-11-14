@@ -13,7 +13,7 @@ MAX_CAPACITY = 100		# Max capacity of link
 
 MAX_DELAY = 100
 
-UPDATE_PATHS_PERIOD = 2
+REROUTING_PERIOD = 2
 
 time_limit = 1
 

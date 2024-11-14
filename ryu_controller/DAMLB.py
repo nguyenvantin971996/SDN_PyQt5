@@ -10,8 +10,8 @@ from ryu.app.wsgi import WSGIApplication, ControllerBase, Response, route
 import json
 from decimal import Decimal
 import copy
-import itertools
-from setting import UPDATE_PATHS_PERIOD, K, MAX_CAPACITY
+from itertools import combinations
+from setting import REROUTING_PERIOD, K, MAX_CAPACITY
 
 from delay_monitor import DelayMonitor
 from port_monitor import PortMonitor
@@ -25,6 +25,7 @@ from FA_static import FA
 from AS_static import AS
 from ACS_static import ACS
 from GA_static import GA
+
 CONF = cfg.CONF
 
 class MultiPathRouting(app_manager.RyuApp):
@@ -289,17 +290,17 @@ class MultiPathRouting(app_manager.RyuApp):
     # Фоновая задача для обновления маршрутов
     def adaptive_routing(self):
         while True:
-            self.rerouting()# Переназначение маршрутов
-            self.update_weights_of_paths_cache()# Обновление стоимости путей
-            hub.sleep(UPDATE_PATHS_PERIOD)
+            metric = copy.deepcopy(self.port_monitor.get_link_costs())
+            self.rerouting(metric)# Переназначение маршрутов
+            self.update_weights_of_paths_cache(metric)# Обновление стоимости путей
+            hub.sleep(REROUTING_PERIOD)
 
     # Функция переназначения маршрутов при перегрузке
-    def rerouting(self):
-        overloaded_links = self.get_overloaded_links()
+    def rerouting(self, metric):
+        overloaded_links = self.get_overloaded_links(metric)
         if len(overloaded_links)!=0:
-            all_flows_overloaded = self.get_flows_overloaded(overloaded_links)
-            link_costs = self.get_costs_to_adapt(overloaded_links, all_flows_overloaded)
-            metric = self.port_monitor.get_link_costs()
+            flows_overloaded = self.get_flows_overloaded(overloaded_links)
+            new_metric = self.get_costs_to_adapt(flows_overloaded, metric)
             tmp_paths_dict = copy.deepcopy(self.paths_cache)
             for key, path_info in tmp_paths_dict.items():
                 old_paths, old_paths_edges, old_pw, src_ip, dst_ip, src_dst, streams = copy.deepcopy(path_info)
@@ -311,7 +312,7 @@ class MultiPathRouting(app_manager.RyuApp):
                         flow = (6, src_ip, dst_ip, tcp_pkt.src_port, None)
                     if udp_pkt:
                         flow = (17, src_ip, dst_ip, None, udp_pkt.src_port)
-                    if flow in all_flows_overloaded:
+                    if flow in flows_overloaded:
                         streams_overloaded.append((path_index, tcp_pkt, udp_pkt))
                         if path_index not in paths_rerouting_index:
                             paths_rerouting_index.append(path_index)
@@ -321,20 +322,20 @@ class MultiPathRouting(app_manager.RyuApp):
                 out_port_dst_sw = key[3]
                 new_k = len(paths_rerouting_index)
                 # Выбор алгоритма маршрутизации
-                alg = YenAlgorithm(link_costs, src, dst, new_k)
-                # alg = ABC(link_costs, src, dst, new_k, 10, 100, 20)
-                # alg = ACS(link_costs, src, dst, new_k, 10, 100, 0.1, 1, 2, 0.5, 1)
-                # alg = AS(link_costs, src, dst, new_k, 10, 100, 0.1, 1, 2, 1)
-                # alg = BFA(link_costs, src, dst, new_k, 10, 100, 0.7, 2, 2)
-                # alg = FA(link_costs, src, dst, new_k, 10, 100, 1, 1, 1)
-                # alg = GA(link_costs, src, dst, new_k, 10, 100, 0.7, 0.7, 2)
+                alg = YenAlgorithm(new_metric, src, dst, new_k)
+                # alg = ABC(new_metric, src, dst, new_k, 10, 100, 20)
+                # alg = ACS(new_metric, src, dst, new_k, 10, 100, 0.1, 1, 2, 0.5, 1)
+                # alg = AS(new_metric, src, dst, new_k, 10, 100, 0.1, 1, 2, 1)
+                # alg = BFA(new_metric, src, dst, new_k, 10, 100, 0.7, 2, 2)
+                # alg = FA(new_metric, src, dst, new_k, 10, 100, 1, 1, 1)
+                # alg = GA(new_metric, src, dst, new_k, 10, 100, 0.7, 0.7, 2)
                 new_paths, new_paths_edges, new_pw = alg.compute_shortest_paths()
                 paths_nodes, paths_edges, paths_weights, x1, x2, x3, x4 = copy.deepcopy(path_info)
                 for idx in range(len(paths_rerouting_index)):
                     x = paths_rerouting_index[idx]
                     paths_nodes[x] = copy.deepcopy(new_paths[idx])
                     paths_edges[x] = copy.deepcopy(new_paths_edges[idx])
-                paths_weights = copy.deepcopy(self.calculate_weights_of_paths(metric, paths_edges))
+                paths_weights = self.calculate_weights_of_paths(metric, paths_edges)
                 self.paths_cache[key][0] = paths_nodes
                 self.paths_cache[key][1] = paths_edges
                 self.paths_cache[key][2] = paths_weights
@@ -346,91 +347,86 @@ class MultiPathRouting(app_manager.RyuApp):
                     self.set_paths_tcp_udp(src, in_port_src_sw, dst, out_port_dst_sw, src_ip, dst_ip,
                                         paths_nodes, normalize_pw, path_index, tcp_pkt, udp_pkt)
 
-    # Получение перегруженных каналов
-    def get_overloaded_links(self):
+    # Получение списка перегруженных каналов (где стоимость канала >= 100)
+    def get_overloaded_links(self, metric):
         overloaded_links = []
-        metric = self.port_monitor.get_link_costs()
         for src in metric:
             for dst in metric[src]:
                 link_cost = metric[src][dst]
-                if link_cost is not None and link_cost >= Decimal('100'):
+                if link_cost is not None and link_cost > Decimal('10'):
                     overloaded_links.append((src, dst))
         return overloaded_links
-
-    # Получение перегруженных потоков               
+    
+    # Получение перегруженных потоков, проходящих через перегруженные каналы
     def get_flows_overloaded(self, overloaded_links):
         capacity = MAX_CAPACITY
-        all_overload_flows = set()
+        all_flows = self.get_all_flows_on_overloaded_links(overloaded_links)
+        optimal_flow_set = self.find_minimal_flow_set(all_flows, overloaded_links, capacity)
+        return set(optimal_flow_set) if optimal_flow_set else set()
+    
+    # Получение всех потоков, проходящих через перегруженные каналы
+    def get_all_flows_on_overloaded_links(self, overloaded_links):
+        all_flows = set()
         for src, dst in overloaded_links:
             if src in self.flow_monitor.switch_to_switch_flows_speed:
                 if dst in self.flow_monitor.switch_to_switch_flows_speed[src]:
-                    flows = {}
-                    for key_flow, speed in self.flow_monitor.switch_to_switch_flows_speed[src][dst].items():
+                    for key_flow in self.flow_monitor.switch_to_switch_flows_speed[src][dst].keys():
                         if key_flow[0] == 17:
-                            flows[key_flow] = speed
-                    chosen_flow_set = self.find_valid_flow_sets(flows, capacity)
-                    if chosen_flow_set:
-                        flow_set, total_speed = chosen_flow_set
-                        flow_set_as_set = set(flow_set)
-                        all_overload_flows.update(flow_set_as_set)
-        return all_overload_flows
+                            all_flows.add(key_flow)
+        return list(all_flows)
 
-    # Поиск валидных наборов потоков
-    def find_valid_flow_sets(self, flows, capacity):
-        flow_keys = list(flows.keys())
-        valid_sets = []  
-        for r in range(len(flow_keys) + 1):
-            for subset in itertools.combinations(flow_keys, r):
-                remaining_keys = set(flow_keys) - set(subset)
-                total_remaining_speed = sum(flows[key] for key in remaining_keys)
-                link_utilization = round(total_remaining_speed / capacity, 1)       
-                if link_utilization < 1:
-                    valid_subset = True
-                    for flow in subset:
-                        new_utilization = round((total_remaining_speed + flows[flow]) / capacity, 1)
-                        if new_utilization < 1:
-                            valid_subset = False
-                            break
-                    if valid_subset:
-                        sorted_subset = sorted(subset, key=lambda k: flows[k], reverse=True)
-                        total_speed = sum(flows[key] for key in subset)
-                        valid_sets.append((sorted_subset, total_speed))
-        
-        if not valid_sets:
-            return None
+    # Поиск минимального множества потоков, удаление которых решает проблему перегрузки
+    def find_minimal_flow_set(self, all_flows, overloaded_links, capacity):
+        valid_flow_sets = []
+        for r in range(1, len(all_flows) + 1):
+            for subset in combinations(all_flows, r):
+                if self.is_valid_solution(subset, overloaded_links, capacity):
+                    total_speed = self.calculate_total_speed(subset, overloaded_links)
+                    valid_flow_sets.append((subset, total_speed))
+        valid_flow_sets.sort(key=lambda x: (len(x[0]), -x[1]))
+        return valid_flow_sets[0][0] if valid_flow_sets else None
 
-        min_size = min(len(flow_set) for flow_set, _ in valid_sets)
-        smallest_flow_sets = [(flow_set, total_speed) for flow_set, total_speed in valid_sets if len(flow_set) == min_size]
-        max_speed = max(total_speed for _, total_speed in smallest_flow_sets)
-        overload_flow_set = [(flow_set, total_speed) for flow_set, total_speed in smallest_flow_sets if total_speed == max_speed][0]
-        
-        return overload_flow_set
+    # Проверка, что удаление указанного множества потоков решает проблему перегрузки
+    def is_valid_solution(self, flow_subset, overloaded_links, capacity):
+        for src, dst in overloaded_links:
+            remaining_speed = sum(
+                                speed for flow, speed in self.flow_monitor.switch_to_switch_flows_speed[src][dst].items()
+                                if flow not in flow_subset
+                                )        
+            link_utilization = round(remaining_speed/capacity, 1)
+            link_cost = None
+            if link_utilization >= 1:
+                link_cost = Decimal('100')
+            else:
+                link_cost= Decimal(str(round(1 / (1 - link_utilization), 1)))
+            if link_cost > Decimal('10'):
+                return False
+        return True
+    
+    # Вычисление общей скорости для множества потоков
+    def calculate_total_speed(self, flow_subset, overloaded_links):
+        total_speed = 0
+        for src, dst in overloaded_links:
+            flow_speeds = self.flow_monitor.switch_to_switch_flows_speed[src][dst]
+            total_speed += sum(flow_speeds[flow] for flow in flow_subset if flow in flow_speeds)
+        return total_speed
 
     # Вычисление стоимости каналов для перегруженных потоков
-    def get_costs_to_adapt(self, overloaded_links, flows_overloaded):
+    def get_costs_to_adapt(self, flows_overloaded, metric):
         capacity = MAX_CAPACITY
-        link_costs = copy.deepcopy(self.port_monitor.get_link_costs())
-        thr = self.port_monitor.get_throughput()
+        new_metric = copy.deepcopy(metric)
         for src in self.flow_monitor.switch_to_switch_flows_speed:
             for dst in self.flow_monitor.switch_to_switch_flows_speed[src]:
-                dk = False
-                s = thr[src][dst] if (src, dst) not in overloaded_links else 0
-                for flow_key, flow_speed in self.flow_monitor.switch_to_switch_flows_speed[src][dst].items():
-                    if (src, dst) in overloaded_links:
-                        if flow_key not in flows_overloaded:
-                            s += flow_speed
-                            dk = True
-                    else:
-                        if flow_key in flows_overloaded:
-                            s =  max(0, s-flow_speed)
-                            dk = True
-                if dk:
-                    link_utilization = round(s/capacity, 1)
+                flows = set(self.flow_monitor.switch_to_switch_flows_speed[src][dst].keys())
+                remain_flows = flows - flows_overloaded
+                if len(flows & flows_overloaded)!=0:
+                    remaining_speed = sum(self.flow_monitor.switch_to_switch_flows_speed[src][dst][flow_key] for flow_key in remain_flows)
+                    link_utilization = round(remaining_speed/capacity, 1)
                     if link_utilization >= 1:
-                        link_costs[src][dst] = Decimal('100')
+                        new_metric[src][dst] = Decimal('100')
                     else:
-                        link_costs[src][dst] = Decimal(str(round(1 / (1 - link_utilization), 1)))
-        return link_costs
+                        new_metric[src][dst] = Decimal(str(round(1 / (1 - link_utilization), 1)))
+        return new_metric
 
     # Добавление портов к путям
     def paths_ports(self, paths_nodes, in_port_src_sw, out_port_dst_sw):
@@ -491,12 +487,11 @@ class MultiPathRouting(app_manager.RyuApp):
         return weights_after_normalizing
 
     # Обновление стоимости путей
-    def update_weights_of_paths_cache(self):
-        metric = self.port_monitor.get_link_costs()
+    def update_weights_of_paths_cache(self, metric):
         tmp_paths_dict = copy.deepcopy(self.paths_cache)
         for key, path_info in tmp_paths_dict.items():
             paths_nodes, paths_edges, paths_weights, x1, x2, x3, x4 = copy.deepcopy(path_info)
-            new_pw = copy.deepcopy(self.calculate_weights_of_paths(metric, paths_edges))
+            new_pw = self.calculate_weights_of_paths(metric, paths_edges)
             self.paths_cache[key][2] = new_pw
 
     # Выбор элемента на основе весов
@@ -520,7 +515,7 @@ class MultiPathRouting(app_manager.RyuApp):
 
     # Получение оптимальных путей для пакетов
     def calculate_best_paths(self, src, dst):
-        metric = self.port_monitor.get_link_costs()
+        metric = copy.deepcopy(self.port_monitor.get_link_costs())
         alg = YenAlgorithm(metric, src, dst, K)
         paths_nodes, paths_edges, paths_weights = alg.compute_shortest_paths()
         return paths_nodes, paths_edges, paths_weights
@@ -566,7 +561,7 @@ class NetworkStatRest(ControllerBase):
         body = json.dumps(rm_bw)
         return Response(content_type='application/json', body=body, status=200)
     
-    @route('rest_api_app', '/paths_nodes', methods=['GET'])
+    @route('rest_api_app', '/paths', methods=['GET'])
     def get_paths(self, req, **kwargs):
         paths_cache = {}
         if len(self.app.paths_cache) != 0:
