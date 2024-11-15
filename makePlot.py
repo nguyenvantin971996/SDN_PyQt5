@@ -2,6 +2,10 @@ import json
 import matplotlib.pyplot as plt
 import os
 import random
+import numpy as np
+import sys
+sys.path.append('../ryu_controller')
+from ryu_controller.setting import PORT_PERIOD
 
 font = {'size': 14}
 plt.rc('font', **font)
@@ -31,7 +35,10 @@ def makePlotChart(fileNames):
     other_labels = []
     n_cols = None
     if len(fileNames)%3==0:
-        n_cols = 3
+        if len(fileNames)==3:
+            n_cols = 1
+        else:
+            n_cols = 3
     else:
         n_cols = 2
     try:
@@ -76,8 +83,8 @@ def makePlotChart(fileNames):
                     lossPercent.append(average_loss)
                 
                 if "jitter_ms" in item['streams'][0]:
-                    avg_jitter = sum([stream.get('jitter_ms', 0) for stream in item['streams']]) / len(item['streams'])
-                    jitter.append(avg_jitter)
+                    average_jitter = sum([stream.get('jitter_ms', 0) for stream in item['streams']]) / len(item['streams'])
+                    jitter.append(average_jitter)
             
             if maxThr <= max(throughputs):
                 maxThr = max(throughputs)
@@ -92,15 +99,21 @@ def makePlotChart(fileNames):
             for i, fileName in enumerate(fileNames):
                 fileName0 = os.path.basename(fileName)
                 fileName = os.path.splitext(fileName0)[0]
+                avg_throughput = np.mean(result[fileName][1])
+                avg_loss = np.mean(result[fileName][2])
+                avg_throughput_str = f"{avg_throughput:.1f}"
+                avg_loss_str = f"{avg_loss:.1f}" 
+                # label_to_plot = f"{fileName} (Throughput={avg_throughput_str} Mbps, Loss={avg_loss_str}%)"
+                label_to_plot_throughtput = f"{fileName} (Throughput={avg_throughput_str} Mbps)"
+                label_to_plot_loss= f"{fileName} (Loss={avg_loss_str}%)"
                 if fileName in styles:
                     style = styles[fileName]
                     line, = ax1.plot(result[fileName][0], result[fileName][1], 
                                     linewidth=2, linestyle=style['linestyle'], 
-                                    marker=style['marker'], markersize=7, 
-                                    label=fileName, color=style['color'])
+                                    marker=style['marker'], markersize=7, color=style['color'])
                     label_idx = labels.index(fileName)
                     legend_lines[label_idx] = line
-                    legend_labels[label_idx] = fileName
+                    legend_labels[label_idx] = [label_to_plot_throughtput, label_to_plot_loss]
                     
                 else:
                     if default_color_idx < len(colors):
@@ -115,23 +128,28 @@ def makePlotChart(fileNames):
 
                     line, = ax1.plot(result[fileName][0], result[fileName][1], 
                                         linewidth=2, linestyle=style['linestyle'], 
-                                        marker=style['marker'], markersize=7, 
-                                        label=fileName, color=style['color'])
+                                        marker=style['marker'], markersize=7, color=style['color'])
                     other_lines.append(line)
-                    other_labels.append(fileName)
+                    other_labels.append([label_to_plot_throughtput, label_to_plot_loss])
                     styles[fileName] = style
+
             valid_legend_lines = [line for line in legend_lines if line is not None]
-            valid_legend_labels = [label for line, label in zip(legend_lines, legend_labels) if line is not None]
-
             combined_lines = valid_legend_lines + other_lines
-            combined_labels = valid_legend_labels + other_labels
 
-            if combined_lines and combined_labels:
-                ax1.legend(combined_lines, combined_labels, loc="upper right", ncol=n_cols)
+            valid_legend_labels_throughput = [label[0] for line, label in zip(legend_lines, legend_labels) if line is not None]
+            other_labels_throughput = [label[0] for label in other_labels]
+
+            valid_legend_labels_loss = [label[1] for line, label in zip(legend_lines, legend_labels) if line is not None]
+            other_labels_loss = [label[1] for label in other_labels]
+
+            combined_labels_throughput = valid_legend_labels_throughput + other_labels_throughput
+            combined_labels_loss = valid_legend_labels_loss + other_labels_loss
+
+            ax1.legend(combined_lines, combined_labels_throughput, loc="upper right", ncol=n_cols)
             ax1.set_ylabel('Throughput (Mbps)')
             ax1.set_xlabel('Time (seconds)')
             ax1.grid()
-            ax1.set_ylim(minThr * 0.5, maxThr * 1.2)
+            ax1.set_ylim(minThr * 0.5, maxThr * 1.4)
 
             for i, fileName in enumerate(fileNames):
                 fileName0 = os.path.basename(fileName)
@@ -144,7 +162,7 @@ def makePlotChart(fileNames):
                          marker=style['marker'], markersize=7, 
                          label=fileName, color=style['color'])
                 
-            ax2.legend(combined_lines, combined_labels, loc="upper right", ncol=n_cols)
+            ax2.legend(combined_lines, combined_labels_loss, loc="upper right", ncol=n_cols)
             ax2.set_ylabel('Packet loss rate (%)')
             ax2.set_xlabel('Time (seconds)')
             ax2.grid()
@@ -235,6 +253,7 @@ def makePlotChart(fileNames):
         default_color_idx = len(labels)
 
         for label, values in dataPerFile.items():
+            moments = [PORT_PERIOD*t for t in range(len(values))]
             if default_color_idx < len(colors):
                 style = {
                     'color': colors[default_color_idx % len(colors)], 
@@ -248,7 +267,7 @@ def makePlotChart(fileNames):
                     'marker': random.choice(matplotlib_markers), 
                     'linestyle': random.choice(matplotlib_linestyles)
                 }
-            ax.plot(values, linewidth=2, 
+            ax.plot(moments, values, linewidth=2, 
                     linestyle=style['linestyle'], marker=style['marker'], 
                     markersize=7, label=label, color=style['color'])
 

@@ -1,6 +1,5 @@
 # Импорт библиотек для работы с Ryu, OpenFlow и LLDP
 from __future__ import division
-from ryu import cfg
 from ryu.base import app_manager
 from ryu.base.app_manager import lookup_service_brick
 from ryu.controller import ofp_event
@@ -9,9 +8,8 @@ from ryu.ofproto import ofproto_v1_3
 from ryu.lib import hub
 from ryu.topology.switches import Switches, LLDPPacket
 import time
-import setting
+from setting import DELAY_PERIOD
 from topology_monitor import TopologyMonitor
-CONF = cfg.CONF
 
 # Инициализация приложения DelayMonitor с атрибутами для мониторинга задержек
 class DelayMonitor(app_manager.RyuApp):
@@ -31,10 +29,10 @@ class DelayMonitor(app_manager.RyuApp):
 
     # Основной цикл мониторинга задержек
     def _detector(self):
-        while CONF.delay == 1:
+        while True:
             self._send_echo_request()
             self.create_link_latency()
-            hub.sleep(setting.DELAY_DETECTING_PERIOD)
+            hub.sleep(DELAY_PERIOD)
 
     # Отправка echo-запросов для каждого коммутатора
     def _send_echo_request(self):

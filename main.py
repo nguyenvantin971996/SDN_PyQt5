@@ -769,8 +769,7 @@ class MainWindow(QMainWindow):
             f.close()
             base_name = os.path.splitext(self.fileName)[0]
             self.fileNameMininet = f'{base_name}.py'
-            self.fileNameMininetDynamic = f'{base_name}_dynamic.py'
-            self.makeScript(self.fileNameMininet, self.fileNameMininetDynamic)
+            self.makeScript(self.fileNameMininet)
             self.makeTraffic()
         else:
             self.SaveAs()
@@ -834,14 +833,11 @@ class MainWindow(QMainWindow):
             f.close()
 
 
-    def makeScript(self, fileNameMininet, fileNameMininetDynamic):
+    def makeScript(self, fileNameMininet):
         try:
-            lib_1, lib_2 = self.makeString()
+            lib_1 = self.makeString()
             with open(fileNameMininet, 'w') as f:
                 f.write(lib_1)
-            f.close()
-            with open(fileNameMininetDynamic, 'w') as f:
-                f.write(lib_2)
             f.close()
             QMessageBox.information(self, "Save", "Save topology and mininet script successfully!")
         except ValueError:
@@ -882,8 +878,7 @@ class MainWindow(QMainWindow):
                 hs += "\tmakeTerm(net['{}'],cmd='bash traffic/{}.sh')\n".format(host.name, host.name)
 
         body_1 = body_1 + host_str + sw_str + link_str + s2 + ctr_str + hs + s3
-        body_2 = body_2 + host_str + sw_str + link_str + s_dynamic + s2 + ctr_str + hs + s3_dynamic
-        return body_1, body_2
+        return body_1
         
     
     def Start(self):

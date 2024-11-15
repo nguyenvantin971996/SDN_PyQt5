@@ -1,19 +1,22 @@
+TOPOLOGY_PERIOD = 2
 
-MODIDY_GROUP_PERIOD = 10
+PORT_PERIOD = 2
 
-DISCOVERY_PERIOD = 2   			# For discovering topology.
+FLOW_PERIOD = 2
 
-MONITOR_PERIOD = 1					# For monitoring traffic
-
-FLOW_PERIOD = 1
-
-DELAY_DETECTING_PERIOD = 2			# For detecting link delay.
+DELAY_PERIOD = 2
 	
-MAX_CAPACITY = 100		# Max capacity of link
+MAX_CAPACITY = 100
 
 MAX_DELAY = 100
 
-REROUTING_PERIOD = 2
+REROUTING_PERIOD = 5
+
+REROUTING_LIMIT = 3
+
+REROUTING_INTERVAL = 30
+
+LENGTH_LBI = 50
 
 time_limit = 1
 
@@ -26,9 +29,3 @@ N = 50
 Max = 10000
 
 patience = 100
-
-n_flows = 4
-
-w_1 = 0.8
-
-w_2 = 0.2

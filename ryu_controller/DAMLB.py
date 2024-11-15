@@ -3,15 +3,15 @@ from ryu.controller import ofp_event
 from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, set_ev_cls
 from ryu.ofproto import ofproto_v1_3
 from ryu.lib.packet import packet, arp, tcp, udp, ethernet, ipv4, ipv6
-from ryu import cfg
 from ryu.lib import hub
 from ryu.app.wsgi import WSGIApplication, ControllerBase, Response, route
 
 import json
+from time import time
 from decimal import Decimal
 import copy
 from itertools import combinations
-from setting import REROUTING_PERIOD, K, MAX_CAPACITY
+from setting import REROUTING_PERIOD, K, MAX_CAPACITY, REROUTING_LIMIT, REROUTING_INTERVAL
 
 from delay_monitor import DelayMonitor
 from port_monitor import PortMonitor
@@ -25,8 +25,6 @@ from FA_static import FA
 from AS_static import AS
 from ACS_static import ACS
 from GA_static import GA
-
-CONF = cfg.CONF
 
 class MultiPathRouting(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -59,6 +57,8 @@ class MultiPathRouting(app_manager.RyuApp):
         self.paths_cache = {}
         self.switch_count = 0
         self.WRR = {}
+        self.rerouting_count = 0
+        self.last_rerouting_time = time() 
 
         # Запуск фоновой задачи для маршрутизации
         self.adaptive_routing_thread = hub.spawn(self.adaptive_routing)
@@ -105,42 +105,63 @@ class MultiPathRouting(app_manager.RyuApp):
         dpid = datapath.id
         if mac_src not in self.hosts_map:
             self.hosts_map[mac_src] = (dpid, in_port)
-        out_port = ofproto.OFPP_FLOOD
 
-        # Обработка ARP-запросов и ответов
+        # Обработка ARP
         if arp_pkt:
             src_ip = arp_pkt.src_ip
             dst_ip = arp_pkt.dst_ip
+            self.ip_to_mac_map[src_ip] = mac_src  # Обновляем карту IP-MAC
+
             if arp_pkt.opcode == arp.ARP_REQUEST:
+                # Проверяем, известен ли MAC-адрес для запрашиваемого IP
                 if dst_ip in self.ip_to_mac_map:
-                    self.ip_to_mac_map[src_ip] = mac_src
                     dst_mac = self.ip_to_mac_map[dst_ip]
-                    src_sw_in_port = self.hosts_map[mac_src]
-                    dst_sw_in_port = self.hosts_map[dst_mac]
-                    paths_nodes, _, _ = self.calculate_best_paths(src_sw_in_port[0], dst_sw_in_port[0])
-                    out_port = self.set_paths_arp_icmp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes)
-
-                    paths_reverse, _, _ = self.calculate_best_paths(dst_sw_in_port[0], src_sw_in_port[0])
-                    self.set_paths_arp_icmp(dst_sw_in_port[0], dst_sw_in_port[1], src_sw_in_port[0], src_sw_in_port[1], dst_ip, src_ip, paths_reverse)
-
+                    # Формируем ARP Reply
+                    arp_reply = packet.Packet()
+                    arp_reply.add_protocol(
+                        ethernet.ethernet(
+                            ethertype=eth.ethertype,
+                            src=dst_mac,
+                            dst=mac_src
+                        )
+                    )
+                    arp_reply.add_protocol(
+                        arp.arp(
+                            opcode=arp.ARP_REPLY,
+                            src_mac=dst_mac,
+                            src_ip=dst_ip,
+                            dst_mac=mac_src,
+                            dst_ip=src_ip
+                        )
+                    )
+                    arp_reply.serialize()
+                    # Отправляем ARP Reply обратно отправителю
+                    actions = [parser.OFPActionOutput(in_port)]
+                    out = parser.OFPPacketOut(
+                        datapath=datapath, buffer_id=ofproto.OFP_NO_BUFFER,
+                        in_port=ofproto.OFPP_CONTROLLER,
+                        actions=actions, data=arp_reply.data
+                    )
+                    datapath.send_msg(out)
+                else:
+                    # Если MAC-адрес неизвестен, отправляем пакет через FLOOD
+                    out_port = ofproto.OFPP_FLOOD
+                    actions = [parser.OFPActionOutput(out_port)]
+                    out = parser.OFPPacketOut(
+                        datapath=datapath, buffer_id=msg.buffer_id,
+                        in_port=in_port, actions=actions, data=msg.data
+                    )
+                    datapath.send_msg(out)
             elif arp_pkt.opcode == arp.ARP_REPLY:
-                self.ip_to_mac_map[src_ip] = mac_src
-                src_sw_in_port = self.hosts_map[mac_src]
-                dst_sw_in_port = self.hosts_map[mac_dst]
-                paths_nodes, _, _ = self.calculate_best_paths(src_sw_in_port[0], dst_sw_in_port[0])
-                out_port = self.set_paths_arp_icmp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes)
-
-                paths_reverse, _, _ = self.calculate_best_paths(dst_sw_in_port[0], src_sw_in_port[0])
-                self.set_paths_arp_icmp(dst_sw_in_port[0], dst_sw_in_port[1], src_sw_in_port[0], src_sw_in_port[1], dst_ip, src_ip, paths_reverse)
-
-            actions = [parser.OFPActionOutput(out_port)]
-            data = None
-            if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-                data = msg.data
-            out = parser.OFPPacketOut(
-                datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,
-                actions=actions, data=data)
-            datapath.send_msg(out)
+                # Обработка ARP Reply: просто передаем дальше
+                if mac_dst in self.hosts_map:
+                    out_port = self.hosts_map[mac_dst][1]
+                    actions = [parser.OFPActionOutput(out_port)]
+                    out = parser.OFPPacketOut(
+                        datapath=datapath, buffer_id=msg.buffer_id,
+                        in_port=in_port, actions=actions, data=msg.data
+                    )
+                    datapath.send_msg(out)
 
         # Обработка TCP и UDP пакетов
         if tcp_pkt or udp_pkt:
@@ -188,36 +209,7 @@ class MultiPathRouting(app_manager.RyuApp):
                     datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,
                     actions=actions, data=data)
                 datapath.send_msg(out)
-
-    # Установка путей для ARP и ICMP
-    def set_paths_arp_icmp(self, src, in_port_src_sw, dst, out_port_dst_sw, ip_src, ip_dst, paths_nodes):
-        paths_with_ports = self.paths_ports(paths_nodes, in_port_src_sw, out_port_dst_sw)
-        selected_path = paths_with_ports[0]
-        for node in selected_path:
-            dp = self.topology_monitor.datapaths[node]
-            ofp = dp.ofproto
-            ofp_parser = dp.ofproto_parser
-            actions = []
-            in_port = selected_path[node][0]
-            out_port = selected_path[node][1]
-            match_ip = ofp_parser.OFPMatch(
-                in_port=in_port,
-                ip_proto=1,
-                eth_type=0x0800, 
-                ipv4_src=ip_src, 
-                ipv4_dst=ip_dst
-            )
-            match_arp = ofp_parser.OFPMatch(
-                in_port=in_port,
-                eth_type=0x0806, 
-                arp_spa=ip_src, 
-                arp_tpa=ip_dst
-            )         
-            actions = [ofp_parser.OFPActionOutput(out_port)]
-            self.install_flow(dp, 1, match_ip, actions)
-            self.install_flow(dp, 1, match_arp, actions)
-        return selected_path[src][1]
-    
+  
     # Удаление потоков по IP для TCP и UDP
     def delete_paths_tcp_udp(self, src, in_port_src_sw, dst, out_port_dst_sw, ip_src, ip_dst, paths_nodes, paths_weights, index, tcp_pkt, udp_pkt):
         paths_with_ports = self.paths_ports(paths_nodes, in_port_src_sw, out_port_dst_sw)
@@ -297,8 +289,17 @@ class MultiPathRouting(app_manager.RyuApp):
 
     # Функция переназначения маршрутов при перегрузке
     def rerouting(self, metric):
+        current_time = time()
+        if self.rerouting_count >= REROUTING_LIMIT:
+            if current_time - self.last_rerouting_time < REROUTING_INTERVAL:
+                return
+            else:
+                self.rerouting_count = 0
+                self.last_rerouting_time = current_time 
         overloaded_links = self.get_overloaded_links(metric)
         if len(overloaded_links)!=0:
+            self.rerouting_count += 1
+            self.last_rerouting_time = current_time
             flows_overloaded = self.get_flows_overloaded(overloaded_links)
             new_metric = self.get_costs_to_adapt(flows_overloaded, metric)
             tmp_paths_dict = copy.deepcopy(self.paths_cache)
@@ -346,6 +347,8 @@ class MultiPathRouting(app_manager.RyuApp):
                                         old_paths, old_normalize_pw, path_index, tcp_pkt, udp_pkt)
                     self.set_paths_tcp_udp(src, in_port_src_sw, dst, out_port_dst_sw, src_ip, dst_ip,
                                         paths_nodes, normalize_pw, path_index, tcp_pkt, udp_pkt)
+        else:
+            self.rerouting_count = 0
 
     # Получение списка перегруженных каналов (где стоимость канала >= 100)
     def get_overloaded_links(self, metric):
@@ -411,7 +414,7 @@ class MultiPathRouting(app_manager.RyuApp):
             total_speed += sum(flow_speeds[flow] for flow in flow_subset if flow in flow_speeds)
         return total_speed
 
-    # Вычисление стоимости каналов для перегруженных потоков
+    # Вычисление стоимости каналов после удаления перегруженных потоков
     def get_costs_to_adapt(self, flows_overloaded, metric):
         capacity = MAX_CAPACITY
         new_metric = copy.deepcopy(metric)

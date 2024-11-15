@@ -1,7 +1,6 @@
 # Импорт библиотек для работы с Ryu, сбором статистики и вычислений
 from __future__ import division
 from operator import attrgetter
-from ryu import cfg
 from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import MAIN_DISPATCHER, set_ev_cls
@@ -10,9 +9,8 @@ from ryu.lib import hub
 from math import pow
 from ryu.base.app_manager import lookup_service_brick
 from decimal import Decimal
-import setting
+from setting import PORT_PERIOD, LENGTH_LBI, MAX_CAPACITY, time_out
 import json
-CONF = cfg.CONF
 
 # Инициализация приложения PortMonitor с атрибутами для мониторинга сети
 class PortMonitor(app_manager.RyuApp):
@@ -34,7 +32,6 @@ class PortMonitor(app_manager.RyuApp):
         self.lbi_history = []  # История индексов балансировки нагрузки
         self.monitor_thread = hub.spawn(self._monitor)  # Запуск мониторинга в отдельном потоке
 
-
     # Основной цикл мониторинга сети, сбор данных и расчет LBI
     def _monitor(self):
         while True:
@@ -44,12 +41,12 @@ class PortMonitor(app_manager.RyuApp):
                     self.update_link_metrics()  # Обновление метрик каналов
 
                     lbi = self.get_load_balancing_index()  # Получение индекса балансировки нагрузки
-                    if lbi is not None and len(self.lbi_history) < 100:
+                    if lbi is not None and len(self.lbi_history) < LENGTH_LBI:
                         self.lbi_history.append(lbi)  # Сохранение LBI в истории
-                    if len(self.lbi_history) == 100:
+                    if len(self.lbi_history) == LENGTH_LBI:
                         self.save_lbi_history_to_json("result/DAMLB.json")  # Сохранение истории в JSON
 
-                hub.sleep(setting.MONITOR_PERIOD)  # Пауза между циклами мониторинга
+                hub.sleep(PORT_PERIOD)  # Пауза между циклами мониторинга
             except Exception as e:
                 self.logger.error("Error in monitoring loop: %s", str(e))  # Логирование ошибок
                 continue
@@ -79,7 +76,7 @@ class PortMonitor(app_manager.RyuApp):
             self.port_features.setdefault(datapath.id, {})
             self._request_stats(datapath)  # Запрос статистики
         
-        if not self.stats_reply_event.wait(timeout=setting.time_out):
+        if not self.stats_reply_event.wait(timeout=time_out):
             self.logger.warning("Stats reply timed out.")
             return
 
@@ -159,7 +156,7 @@ class PortMonitor(app_manager.RyuApp):
 
     # Обновление метрик каналов и расчет стоимости каналов
     def update_link_metrics(self):
-        capacity = setting.MAX_CAPACITY  # Максимальная пропускная способность
+        capacity = MAX_CAPACITY  # Максимальная пропускная способность
         new_link_costs = {}
 
         for src in self.topology_monitor.graph:
