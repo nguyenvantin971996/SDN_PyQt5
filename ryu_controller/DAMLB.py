@@ -176,10 +176,10 @@ class MultiPathRouting(app_manager.RyuApp):
                 normalized_weights = self.normalize(paths_weights)
                 weights = [int(round(i*10)) for i in normalized_weights]
                 src_dst = f"Using DAMLB: {proto_type.upper()} {src_ip} --> {dst_ip}"
-                streams = []
+                streams = set()
                 self.WRR[key] = 1
                 initial_index = self.weighted_periodic_distribution(weights, 1)
-                streams.append((initial_index, tcp_pkt, udp_pkt))
+                streams.add((initial_index, tcp_pkt, udp_pkt))
                 self.paths_cache[key] = [paths_nodes, paths_edges, paths_weights, src_ip, dst_ip, src_dst, streams]
                 out_port = self.set_paths_tcp_udp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes, normalized_weights, initial_index, tcp_pkt, udp_pkt)
 
@@ -198,7 +198,7 @@ class MultiPathRouting(app_manager.RyuApp):
                 weights = [int(round(i*10)) for i in normalized_weights]
                 self.WRR[key] += 1
                 next_index = self.weighted_periodic_distribution(weights, self.WRR[key])
-                self.paths_cache[key][-1].append((next_index, tcp_pkt, udp_pkt))
+                self.paths_cache[key][-1].add((next_index, tcp_pkt, udp_pkt))
                 out_port = self.set_paths_tcp_udp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes, normalized_weights, next_index, tcp_pkt, udp_pkt)
                 
                 actions = [parser.OFPActionOutput(out_port)]
@@ -303,10 +303,11 @@ class MultiPathRouting(app_manager.RyuApp):
             flows_overloaded = self.get_flows_overloaded(overloaded_links)
             new_metric = self.get_costs_to_adapt(flows_overloaded, metric)
             tmp_paths_dict = copy.deepcopy(self.paths_cache)
+            new_WRR = {}
             for key, path_info in tmp_paths_dict.items():
                 old_paths, old_paths_edges, old_pw, src_ip, dst_ip, src_dst, streams = copy.deepcopy(path_info)
+
                 streams_overloaded = []
-                paths_rerouting_index = []
                 for path_index, tcp_pkt, udp_pkt in streams:
                     flow = None
                     if tcp_pkt:
@@ -315,42 +316,55 @@ class MultiPathRouting(app_manager.RyuApp):
                         flow = (17, src_ip, dst_ip, None, udp_pkt.src_port)
                     if flow in flows_overloaded:
                         streams_overloaded.append((path_index, tcp_pkt, udp_pkt))
-                        if path_index not in paths_rerouting_index:
-                            paths_rerouting_index.append(path_index)
-                src = key[0]
-                in_port_src_sw = key[1]
-                dst = key[2]
-                out_port_dst_sw = key[3]
-                new_k = len(paths_rerouting_index)
-                # Выбор алгоритма маршрутизации
-                alg = YenAlgorithm(new_metric, src, dst, new_k)
-                # alg = ABC(new_metric, src, dst, new_k, 10, 100, 20)
-                # alg = ACS(new_metric, src, dst, new_k, 10, 100, 0.1, 1, 2, 0.5, 1)
-                # alg = AS(new_metric, src, dst, new_k, 10, 100, 0.1, 1, 2, 1)
-                # alg = BFA(new_metric, src, dst, new_k, 10, 100, 0.7, 2, 2)
-                # alg = FA(new_metric, src, dst, new_k, 10, 100, 1, 1, 1)
-                # alg = GA(new_metric, src, dst, new_k, 10, 100, 0.7, 0.7, 2)
-                new_paths, new_paths_edges, new_pw = alg.compute_shortest_paths()
-                paths_nodes, paths_edges, paths_weights, x1, x2, x3, x4 = copy.deepcopy(path_info)
-                for idx in range(len(paths_rerouting_index)):
-                    x = paths_rerouting_index[idx]
-                    paths_nodes[x] = copy.deepcopy(new_paths[idx])
-                    paths_edges[x] = copy.deepcopy(new_paths_edges[idx])
-                paths_weights = self.calculate_weights_of_paths(metric, paths_edges)
-                self.paths_cache[key][0] = paths_nodes
-                self.paths_cache[key][1] = paths_edges
-                self.paths_cache[key][2] = paths_weights
-                normalize_pw = self.normalize(paths_weights)
-                old_normalize_pw = self.normalize(old_pw)
-                for path_index, tcp_pkt, udp_pkt in streams_overloaded:
-                    self.delete_paths_tcp_udp(src, in_port_src_sw, dst, out_port_dst_sw, src_ip, dst_ip,
-                                        old_paths, old_normalize_pw, path_index, tcp_pkt, udp_pkt)
-                    self.set_paths_tcp_udp(src, in_port_src_sw, dst, out_port_dst_sw, src_ip, dst_ip,
-                                        paths_nodes, normalize_pw, path_index, tcp_pkt, udp_pkt)
+
+                if streams_overloaded:
+                    new_WRR[key] = 0
+                    src = key[0]
+                    in_port_src_sw = key[1]
+                    dst = key[2]
+                    out_port_dst_sw = key[3]
+
+                    alg = YenAlgorithm(new_metric, src, dst, K)
+                    # alg = ABC(new_metric, src, dst, K, 10, 100, 20)
+                    # alg = ACS(new_metric, src, dst, K, 10, 100, 0.1, 1, 2, 0.5, 1)
+                    # alg = AS(new_metric, src, dst, K, 10, 100, 0.1, 1, 2, 1)
+                    # alg = BFA(new_metric, src, dst, K, 10, 100, 0.7, 2, 2)
+                    # alg = FA(new_metric, src, dst, K, 10, 100, 1, 1, 1)
+                    # alg = GA(new_metric, src, dst, K, 10, 100, 0.7, 0.7, 2)
+                    new_paths, new_paths_edges, new_pw = alg.compute_shortest_paths()
+                    
+                    normalized_pw = self.normalize(new_pw)
+                    weights = [int(round(i*10)) for i in normalized_pw]
+
+                    old_normalize_pw = self.normalize(old_pw)
+
+                    pos_path = len(self.paths_cache[key][0])
+
+                    for path_index, tcp_pkt, udp_pkt in streams_overloaded:
+                        new_WRR[key] += 1
+                        next_index = self.weighted_periodic_distribution(weights, new_WRR[key])
+                        
+                        self.delete_paths_tcp_udp(
+                            src, in_port_src_sw, dst, out_port_dst_sw, src_ip, dst_ip,
+                            old_paths, old_normalize_pw, path_index, tcp_pkt, udp_pkt
+                        )
+
+                        self.set_paths_tcp_udp(
+                            src, in_port_src_sw, dst, out_port_dst_sw, src_ip, dst_ip,
+                            new_paths, normalized_pw, next_index, tcp_pkt, udp_pkt
+                        )
+
+                        streams.remove((path_index, tcp_pkt, udp_pkt))
+                        streams.add((pos_path+next_index, tcp_pkt, udp_pkt))
+                    
+                    self.paths_cache[key][0].extend(new_paths)
+                    self.paths_cache[key][1].extend(new_paths_edges)
+                    self.paths_cache[key][2].extend(new_pw)
+                    self.paths_cache[key][-1] = streams
         else:
             self.rerouting_count = 0
 
-    # Получение списка перегруженных каналов (где стоимость канала >= 100)
+    # Получение списка перегруженных каналов (где стоимость канала > 10)
     def get_overloaded_links(self, metric):
         overloaded_links = []
         for src in metric:
@@ -360,14 +374,14 @@ class MultiPathRouting(app_manager.RyuApp):
                     overloaded_links.append((src, dst))
         return overloaded_links
     
-    # Получение перегруженных потоков, проходящих через перегруженные каналы
+    # Получение потоков, проходящих через перегруженные каналы
     def get_flows_overloaded(self, overloaded_links):
         capacity = MAX_CAPACITY
         all_flows = self.get_all_flows_on_overloaded_links(overloaded_links)
         optimal_flow_set = self.find_minimal_flow_set(all_flows, overloaded_links, capacity)
         return set(optimal_flow_set) if optimal_flow_set else set()
     
-    # Получение всех потоков, проходящих через перегруженные каналы
+    # Получение всех потоков, проходящих через все перегруженные каналы
     def get_all_flows_on_overloaded_links(self, overloaded_links):
         all_flows = set()
         for src, dst in overloaded_links:
@@ -378,7 +392,7 @@ class MultiPathRouting(app_manager.RyuApp):
                             all_flows.add(key_flow)
         return list(all_flows)
 
-    # Поиск минимального множества потоков, удаление которых решает проблему перегрузки
+    # Поиск минимального множества потоков, удаление которых решает проблему перегрузки на всех перегруженных каналах
     def find_minimal_flow_set(self, all_flows, overloaded_links, capacity):
         valid_flow_sets = []
         for r in range(1, len(all_flows) + 1):
