@@ -162,7 +162,7 @@
                 520
             ],
             "server": 1,
-            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2_DAMLB.json &\nwait"
+            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2_DAMLB_10.json &\nwait"
         },
         {
             "nameClass": "Host",
@@ -190,7 +190,7 @@
                 964
             ],
             "server": 1,
-            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H4_DAMLB.json &\nwait"
+            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H4_DAMLB_10.json &\nwait"
         }
     ],
     "links": [
@@ -873,7 +873,7 @@
                     520
                 ],
                 "server": 1,
-                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2_DAMLB.json &\nwait"
+                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2_DAMLB_10.json &\nwait"
             },
             "port": [
                 5,
@@ -1005,7 +1005,7 @@
                     964
                 ],
                 "server": 1,
-                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H4_DAMLB.json &\nwait"
+                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H4_DAMLB_10.json &\nwait"
             },
             "port": [
                 4,

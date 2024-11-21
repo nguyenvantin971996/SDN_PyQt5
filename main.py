@@ -3,16 +3,13 @@ import os
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-import numpy as np
 import random
-import math
 import json
 from values import *
 from makePlot import makePlotChart
 import subprocess
 import time
 import requests
-import statistics
 import re
 
 class Terminal(QMainWindow):
@@ -209,7 +206,7 @@ class MainWindow(QMainWindow):
 
     def initUI(self):
         self.font = QFont('Arial', 15)
-        self.colors = [Qt.red, Qt.green, Qt.blue, Qt.cyan, Qt.magenta]
+        self.colors = [Qt.red, Qt.green, Qt.blue, Qt.cyan, Qt.magenta, Qt.yellow, Qt.darkRed, Qt.darkGreen, Qt.darkBlue, Qt.darkCyan, Qt.darkMagenta, Qt.darkYellow]
         self.setFont(self.font)
         self.setWindowTitle("SDNLoadBalancer")
         self.setWindowIcon(QIcon("images/SDN.png"))
@@ -913,7 +910,7 @@ class MainWindow(QMainWindow):
                 self.timer.timeout.connect(lambda: self.display_metrics(self.dynamicMetric.tableWidget1, 'cost_2'))
                 # self.timer.timeout.connect(lambda: self.display_metrics(self.dynamicMetric.tableWidget2, 'latency'))
                 
-                self.timer.timeout.connect(self.get_paths)
+                # self.timer.timeout.connect(self.get_paths)
                 updateInterval = 2000
                 self.timer.start(updateInterval)
     

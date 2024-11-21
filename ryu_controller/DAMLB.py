@@ -2,7 +2,7 @@ from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, set_ev_cls
 from ryu.ofproto import ofproto_v1_3
-from ryu.lib.packet import packet, arp, tcp, udp, ethernet, ipv4, ipv6
+from ryu.lib.packet import packet, arp, tcp, udp, ethernet, ipv4, ipv6, icmp
 from ryu.lib import hub
 from ryu.app.wsgi import WSGIApplication, ControllerBase, Response, route
 
@@ -10,8 +10,7 @@ import json
 from time import time
 from decimal import Decimal
 import copy
-from itertools import combinations
-from setting import REROUTING_PERIOD, K, MAX_CAPACITY, REROUTING_LIMIT, REROUTING_INTERVAL
+from setting import REROUTING_PERIOD, K, MAX_CAPACITY, MAX_VALUE
 
 from delay_monitor import DelayMonitor
 from port_monitor import PortMonitor
@@ -57,8 +56,6 @@ class MultiPathRouting(app_manager.RyuApp):
         self.paths_cache = {}
         self.switch_count = 0
         self.WRR = {}
-        self.rerouting_count = 0
-        self.last_rerouting_time = time() 
 
         # Запуск фоновой задачи для маршрутизации
         self.adaptive_routing_thread = hub.spawn(self.adaptive_routing)
@@ -81,7 +78,6 @@ class MultiPathRouting(app_manager.RyuApp):
     def _packet_in_handler(self, ev):
         msg = ev.msg
         datapath = msg.datapath
-        ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         in_port = msg.match['in_port']
         pkt = packet.Packet(msg.data)
@@ -90,6 +86,7 @@ class MultiPathRouting(app_manager.RyuApp):
         udp_pkt = pkt.get_protocol(udp.udp)
         tcp_pkt = pkt.get_protocol(tcp.tcp)
         ip_pkt = pkt.get_protocol(ipv4.ipv4)
+        icmp_pkt = pkt.get_protocol(icmp.icmp)
 
         if eth.ethertype == 35020:
             return
@@ -101,117 +98,190 @@ class MultiPathRouting(app_manager.RyuApp):
             return None
 
         mac_src = eth.src
-        mac_dst = eth.dst
         dpid = datapath.id
+
         if mac_src not in self.hosts_map:
             self.hosts_map[mac_src] = (dpid, in_port)
 
         # Обработка ARP
         if arp_pkt:
-            src_ip = arp_pkt.src_ip
-            dst_ip = arp_pkt.dst_ip
-            self.ip_to_mac_map[src_ip] = mac_src  # Обновляем карту IP-MAC
+            self.handle_arp(datapath, in_port, pkt, arp_pkt, msg)
+            return
+        
+        # Обработка ICMP
+        if icmp_pkt:
+            self.handle_icmp(datapath, in_port, pkt, ip_pkt, icmp_pkt, msg)
+            return
 
-            if arp_pkt.opcode == arp.ARP_REQUEST:
-                # Проверяем, известен ли MAC-адрес для запрашиваемого IP
-                if dst_ip in self.ip_to_mac_map:
-                    dst_mac = self.ip_to_mac_map[dst_ip]
-                    # Формируем ARP Reply
-                    arp_reply = packet.Packet()
-                    arp_reply.add_protocol(
-                        ethernet.ethernet(
-                            ethertype=eth.ethertype,
-                            src=dst_mac,
-                            dst=mac_src
-                        )
-                    )
-                    arp_reply.add_protocol(
-                        arp.arp(
-                            opcode=arp.ARP_REPLY,
-                            src_mac=dst_mac,
-                            src_ip=dst_ip,
-                            dst_mac=mac_src,
-                            dst_ip=src_ip
-                        )
-                    )
-                    arp_reply.serialize()
-                    # Отправляем ARP Reply обратно отправителю
-                    actions = [parser.OFPActionOutput(in_port)]
-                    out = parser.OFPPacketOut(
-                        datapath=datapath, buffer_id=ofproto.OFP_NO_BUFFER,
-                        in_port=ofproto.OFPP_CONTROLLER,
-                        actions=actions, data=arp_reply.data
-                    )
-                    datapath.send_msg(out)
-                else:
-                    # Если MAC-адрес неизвестен, отправляем пакет через FLOOD
-                    out_port = ofproto.OFPP_FLOOD
-                    actions = [parser.OFPActionOutput(out_port)]
-                    out = parser.OFPPacketOut(
-                        datapath=datapath, buffer_id=msg.buffer_id,
-                        in_port=in_port, actions=actions, data=msg.data
-                    )
-                    datapath.send_msg(out)
-            elif arp_pkt.opcode == arp.ARP_REPLY:
-                # Обработка ARP Reply: просто передаем дальше
-                if mac_dst in self.hosts_map:
-                    out_port = self.hosts_map[mac_dst][1]
-                    actions = [parser.OFPActionOutput(out_port)]
-                    out = parser.OFPPacketOut(
-                        datapath=datapath, buffer_id=msg.buffer_id,
-                        in_port=in_port, actions=actions, data=msg.data
-                    )
-                    datapath.send_msg(out)
-
-        # Обработка TCP и UDP пакетов
+        # Обработка TCP и UDP
         if tcp_pkt or udp_pkt:
-            src_ip = ip_pkt.src
-            dst_ip = ip_pkt.dst
-            src_sw_in_port = self.hosts_map[mac_src]
-            dst_sw_in_port = self.hosts_map[mac_dst]     
-            proto_type = 'tcp' if tcp_pkt else 'udp'
-            key = (src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], proto_type)
-            if key not in list(self.paths_cache.keys()):
-                paths_nodes, paths_edges, paths_weights = self.calculate_best_paths(src_sw_in_port[0], dst_sw_in_port[0])
-                normalized_weights = self.normalize(paths_weights)
-                weights = [int(round(i*10)) for i in normalized_weights]
-                src_dst = f"Using DAMLB: {proto_type.upper()} {src_ip} --> {dst_ip}"
-                streams = set()
-                self.WRR[key] = 1
-                initial_index = self.weighted_periodic_distribution(weights, 1)
-                streams.add((initial_index, tcp_pkt, udp_pkt))
-                self.paths_cache[key] = [paths_nodes, paths_edges, paths_weights, src_ip, dst_ip, src_dst, streams]
-                out_port = self.set_paths_tcp_udp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes, normalized_weights, initial_index, tcp_pkt, udp_pkt)
+            self.handle_tcp_udp(datapath, in_port, pkt, ip_pkt, tcp_pkt, udp_pkt, msg)
+            return
+    
+    def handle_arp(self, datapath, in_port, pkt, arp_pkt, msg):
+        parser = datapath.ofproto_parser
+        ofproto = datapath.ofproto
+        eth = pkt.get_protocol(ethernet.ethernet)
+        src_ip = arp_pkt.src_ip
+        dst_ip = arp_pkt.dst_ip
+        mac_src = eth.src
+        mac_dst = eth.dst
 
-                actions = [parser.OFPActionOutput(out_port)]
-                data = None
-                if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-                    data = msg.data
+        self.ip_to_mac_map[src_ip] = mac_src  # Обновляем карту IP-MAC
+
+        if arp_pkt.opcode == arp.ARP_REQUEST:
+            if dst_ip in self.ip_to_mac_map:
+                dst_mac = self.ip_to_mac_map[dst_ip]
+                # Формируем ARP Reply
+                arp_reply = packet.Packet()
+                arp_reply.add_protocol(
+                    ethernet.ethernet(
+                        ethertype=eth.ethertype,
+                        src=dst_mac,
+                        dst=mac_src
+                    )
+                )
+                arp_reply.add_protocol(
+                    arp.arp(
+                        opcode=arp.ARP_REPLY,
+                        src_mac=dst_mac,
+                        src_ip=dst_ip,
+                        dst_mac=mac_src,
+                        dst_ip=src_ip
+                    )
+                )
+                arp_reply.serialize()
+                actions = [parser.OFPActionOutput(in_port)]
                 out = parser.OFPPacketOut(
-                    datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,
-                    actions=actions, data=data)
+                    datapath=datapath, buffer_id=ofproto.OFP_NO_BUFFER,
+                    in_port=ofproto.OFPP_CONTROLLER,
+                    actions=actions, data=arp_reply.data
+                )
                 datapath.send_msg(out)
-
             else:
-                [paths_nodes, paths_edges, paths_weights, x1, x2, x3, streams] = self.paths_cache[key]
-                normalized_weights = self.normalize(paths_weights)
-                weights = [int(round(i*10)) for i in normalized_weights]
-                self.WRR[key] += 1
-                next_index = self.weighted_periodic_distribution(weights, self.WRR[key])
-                self.paths_cache[key][-1].add((next_index, tcp_pkt, udp_pkt))
-                out_port = self.set_paths_tcp_udp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes, normalized_weights, next_index, tcp_pkt, udp_pkt)
-                
-                actions = [parser.OFPActionOutput(out_port)]
-                data = None
-                if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-                    data = msg.data
+                actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
                 out = parser.OFPPacketOut(
-                    datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,
-                    actions=actions, data=data)
+                    datapath=datapath, buffer_id=msg.buffer_id,
+                    in_port=in_port, actions=actions, data=msg.data
+                )
                 datapath.send_msg(out)
-  
+
+        elif arp_pkt.opcode == arp.ARP_REPLY:
+            if mac_dst in self.hosts_map:
+                out_port = self.hosts_map[mac_dst][1]
+                actions = [parser.OFPActionOutput(out_port)]
+                out = parser.OFPPacketOut(
+                    datapath=datapath, buffer_id=msg.buffer_id,
+                    in_port=in_port, actions=actions, data=msg.data
+                )
+                datapath.send_msg(out)
+
+    def handle_icmp(self, datapath, in_port, pkt, ip_pkt, icmp_pkt, msg):
+        parser = datapath.ofproto_parser
+        ofproto = datapath.ofproto
+        eth = pkt.get_protocol(ethernet.ethernet)
+        src_ip = ip_pkt.src
+        dst_ip = ip_pkt.dst
+        mac_src = eth.src
+        mac_dst = eth.dst
+
+        if icmp_pkt.type == icmp.ICMP_ECHO_REQUEST:
+            icmp_reply = packet.Packet()
+            icmp_reply.add_protocol(
+                ethernet.ethernet(
+                    ethertype=eth.ethertype,
+                    src=mac_dst,
+                    dst=mac_src
+                )
+            )
+            icmp_reply.add_protocol(
+                ipv4.ipv4(
+                    dst=src_ip,
+                    src=dst_ip,
+                    proto=ip_pkt.proto
+                )
+            )
+            icmp_reply.add_protocol(
+                icmp.icmp(
+                    type_=icmp.ICMP_ECHO_REPLY,
+                    code=icmp.ICMP_ECHO_REPLY_CODE,
+                    csum=0,
+                    data=icmp_pkt.data
+                )
+            )
+            icmp_reply.serialize()
+            actions = [parser.OFPActionOutput(in_port)]
+            out = parser.OFPPacketOut(
+                datapath=datapath, buffer_id=ofproto.OFP_NO_BUFFER,
+                in_port=ofproto.OFPP_CONTROLLER,
+                actions=actions, data=icmp_reply.data
+            )
+            datapath.send_msg(out)
+        else:
+            if mac_dst in self.hosts_map:
+                out_port = self.hosts_map[mac_dst][1]
+                actions = [parser.OFPActionOutput(out_port)]
+                out = parser.OFPPacketOut(
+                    datapath=datapath, buffer_id=msg.buffer_id,
+                    in_port=in_port, actions=actions, data=msg.data
+                )
+                datapath.send_msg(out)
+
+    def handle_tcp_udp(self, datapath, in_port, pkt, ip_pkt, tcp_pkt, udp_pkt, msg):
+        parser = datapath.ofproto_parser
+        ofproto = datapath.ofproto
+        eth = pkt.get_protocol(ethernet.ethernet)
+        src_ip = ip_pkt.src
+        dst_ip = ip_pkt.dst
+        mac_src = eth.src
+        mac_dst = eth.dst
+        src_sw_in_port = self.hosts_map[mac_src]
+        dst_sw_in_port = self.hosts_map[mac_dst]
+
+        proto_type = 'tcp' if tcp_pkt else 'udp'
+        key = (src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], proto_type)
+
+        if key not in self.paths_cache:
+            paths_nodes, paths_edges, paths_weights = self.calculate_best_paths(src_sw_in_port[0], dst_sw_in_port[0])
+            normalized_weights = self.normalize(paths_weights)
+            weights = [int(round(i * 10)) for i in normalized_weights]
+            src_dst = f"Using DAMLB: {proto_type.upper()} {src_ip} --> {dst_ip}"
+            streams = set()
+            self.WRR[key] = [weights, 1]
+            initial_index = self.weighted_periodic_distribution(self.WRR[key][0], self.WRR[key][1])
+            streams.add((initial_index, tcp_pkt, udp_pkt))
+            self.paths_cache[key] = [paths_nodes, paths_edges, paths_weights, src_ip, dst_ip, src_dst, streams]
+            out_port = self.set_paths_tcp_udp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1],
+                                            src_ip, dst_ip, paths_nodes, initial_index, tcp_pkt, udp_pkt)
+            
+            actions = [parser.OFPActionOutput(out_port)]
+            data = None
+            if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+                data = msg.data
+            out = parser.OFPPacketOut(
+                datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,
+                actions=actions, data=data)
+            datapath.send_msg(out)
+
+        else:
+            paths_nodes, paths_edges, paths_weights, *_ = self.paths_cache[key]
+            self.WRR[key][1] += 1
+            next_index = self.weighted_periodic_distribution(self.WRR[key][0], self.WRR[key][1])
+            self.paths_cache[key][-1].add((next_index, tcp_pkt, udp_pkt))
+            out_port = self.set_paths_tcp_udp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1],
+                                            src_ip, dst_ip, paths_nodes, next_index, tcp_pkt, udp_pkt)
+            
+            actions = [parser.OFPActionOutput(out_port)]
+            data = None
+            if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+                data = msg.data
+            out = parser.OFPPacketOut(
+                datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,
+                actions=actions, data=data)
+            datapath.send_msg(out)
+
     # Удаление потоков по IP для TCP и UDP
-    def delete_paths_tcp_udp(self, src, in_port_src_sw, dst, out_port_dst_sw, ip_src, ip_dst, paths_nodes, paths_weights, index, tcp_pkt, udp_pkt):
+    def delete_paths_tcp_udp(self, src, in_port_src_sw, dst, out_port_dst_sw, ip_src, ip_dst, paths_nodes, index, tcp_pkt, udp_pkt):
         paths_with_ports = self.paths_ports(paths_nodes, in_port_src_sw, out_port_dst_sw)
         selected_path = paths_with_ports[index]
         for node in selected_path:
@@ -244,12 +314,11 @@ class MultiPathRouting(app_manager.RyuApp):
         return
     
     # Установка потоков по IP для TCP и UDP
-    def set_paths_tcp_udp(self, src, in_port_src_sw, dst, out_port_dst_sw, ip_src, ip_dst, paths_nodes, paths_weights, index, tcp_pkt, udp_pkt):
+    def set_paths_tcp_udp(self, src, in_port_src_sw, dst, out_port_dst_sw, ip_src, ip_dst, paths_nodes, index, tcp_pkt, udp_pkt):
         paths_with_ports = self.paths_ports(paths_nodes, in_port_src_sw, out_port_dst_sw)
         selected_path = paths_with_ports[index]
         for node in selected_path:
             dp = self.topology_monitor.datapaths[node]
-            ofp = dp.ofproto
             ofp_parser = dp.ofproto_parser
             actions = []
             in_port = selected_path[node][0]
@@ -284,22 +353,12 @@ class MultiPathRouting(app_manager.RyuApp):
         while True:
             metric = copy.deepcopy(self.port_monitor.get_link_costs())
             self.rerouting(metric)# Переназначение маршрутов
-            self.update_weights_of_paths_cache(metric)# Обновление стоимости путей
             hub.sleep(REROUTING_PERIOD)
 
     # Функция переназначения маршрутов при перегрузке
     def rerouting(self, metric):
-        current_time = time()
-        if self.rerouting_count >= REROUTING_LIMIT:
-            if current_time - self.last_rerouting_time < REROUTING_INTERVAL:
-                return
-            else:
-                self.rerouting_count = 0
-                self.last_rerouting_time = current_time 
         overloaded_links = self.get_overloaded_links(metric)
         if len(overloaded_links)!=0:
-            self.rerouting_count += 1
-            self.last_rerouting_time = current_time
             flows_overloaded = self.get_flows_overloaded(overloaded_links)
             new_metric = self.get_costs_to_adapt(flows_overloaded, metric)
             tmp_paths_dict = copy.deepcopy(self.paths_cache)
@@ -318,7 +377,6 @@ class MultiPathRouting(app_manager.RyuApp):
                         streams_overloaded.append((path_index, tcp_pkt, udp_pkt))
 
                 if streams_overloaded:
-                    new_WRR[key] = 0
                     src = key[0]
                     in_port_src_sw = key[1]
                     dst = key[2]
@@ -334,35 +392,33 @@ class MultiPathRouting(app_manager.RyuApp):
                     new_paths, new_paths_edges, new_pw = alg.compute_shortest_paths()
                     
                     normalized_pw = self.normalize(new_pw)
-                    weights = [int(round(i*10)) for i in normalized_pw]
-
-                    old_normalize_pw = self.normalize(old_pw)
+                    new_weights = [int(round(itm*10)) for itm in normalized_pw]
+                    new_WRR[key] = [new_weights, 0]
 
                     pos_path = len(self.paths_cache[key][0])
-
                     for path_index, tcp_pkt, udp_pkt in streams_overloaded:
-                        new_WRR[key] += 1
-                        next_index = self.weighted_periodic_distribution(weights, new_WRR[key])
+                        new_WRR[key][1] += 1
+                        next_index = self.weighted_periodic_distribution(new_WRR[key][0], new_WRR[key][1])
                         
                         self.delete_paths_tcp_udp(
                             src, in_port_src_sw, dst, out_port_dst_sw, src_ip, dst_ip,
-                            old_paths, old_normalize_pw, path_index, tcp_pkt, udp_pkt
+                            old_paths, path_index, tcp_pkt, udp_pkt
                         )
 
                         self.set_paths_tcp_udp(
                             src, in_port_src_sw, dst, out_port_dst_sw, src_ip, dst_ip,
-                            new_paths, normalized_pw, next_index, tcp_pkt, udp_pkt
+                            new_paths, next_index, tcp_pkt, udp_pkt
                         )
 
                         streams.remove((path_index, tcp_pkt, udp_pkt))
                         streams.add((pos_path+next_index, tcp_pkt, udp_pkt))
+                        
                     
                     self.paths_cache[key][0].extend(new_paths)
                     self.paths_cache[key][1].extend(new_paths_edges)
                     self.paths_cache[key][2].extend(new_pw)
                     self.paths_cache[key][-1] = streams
-        else:
-            self.rerouting_count = 0
+            print(overloaded_links, flows_overloaded)
 
     # Получение списка перегруженных каналов (где стоимость канала > 10)
     def get_overloaded_links(self, metric):
@@ -377,31 +433,19 @@ class MultiPathRouting(app_manager.RyuApp):
     # Получение потоков, проходящих через перегруженные каналы
     def get_flows_overloaded(self, overloaded_links):
         capacity = MAX_CAPACITY
-        all_flows = self.get_all_flows_on_overloaded_links(overloaded_links)
-        optimal_flow_set = self.find_minimal_flow_set(all_flows, overloaded_links, capacity)
-        return set(optimal_flow_set) if optimal_flow_set else set()
-    
-    # Получение всех потоков, проходящих через все перегруженные каналы
-    def get_all_flows_on_overloaded_links(self, overloaded_links):
-        all_flows = set()
+        flow_speeds = {}
         for src, dst in overloaded_links:
-            if src in self.flow_monitor.switch_to_switch_flows_speed:
-                if dst in self.flow_monitor.switch_to_switch_flows_speed[src]:
-                    for key_flow in self.flow_monitor.switch_to_switch_flows_speed[src][dst].keys():
-                        if key_flow[0] == 17:
-                            all_flows.add(key_flow)
-        return list(all_flows)
-
-    # Поиск минимального множества потоков, удаление которых решает проблему перегрузки на всех перегруженных каналах
-    def find_minimal_flow_set(self, all_flows, overloaded_links, capacity):
-        valid_flow_sets = []
-        for r in range(1, len(all_flows) + 1):
-            for subset in combinations(all_flows, r):
-                if self.is_valid_solution(subset, overloaded_links, capacity):
-                    total_speed = self.calculate_total_speed(subset, overloaded_links)
-                    valid_flow_sets.append((subset, total_speed))
-        valid_flow_sets.sort(key=lambda x: (len(x[0]), -x[1]))
-        return valid_flow_sets[0][0] if valid_flow_sets else None
+            for flow, speed in self.flow_monitor.switch_to_switch_flows_speed[src][dst].items():
+                if flow not in flow_speeds:
+                    flow_speeds[flow] = 0
+                flow_speeds[flow] += speed
+        sorted_flows = sorted(flow_speeds.items(), key=lambda x: x[1], reverse=True)
+        selected_flows = set()
+        for flow, speed in sorted_flows:
+            selected_flows.add(flow)
+            if self.is_valid_solution(selected_flows, overloaded_links, capacity):
+                break
+        return selected_flows
 
     # Проверка, что удаление указанного множества потоков решает проблему перегрузки
     def is_valid_solution(self, flow_subset, overloaded_links, capacity):
@@ -419,14 +463,6 @@ class MultiPathRouting(app_manager.RyuApp):
             if link_cost > Decimal('10'):
                 return False
         return True
-    
-    # Вычисление общей скорости для множества потоков
-    def calculate_total_speed(self, flow_subset, overloaded_links):
-        total_speed = 0
-        for src, dst in overloaded_links:
-            flow_speeds = self.flow_monitor.switch_to_switch_flows_speed[src][dst]
-            total_speed += sum(flow_speeds[flow] for flow in flow_subset if flow in flow_speeds)
-        return total_speed
 
     # Вычисление стоимости каналов после удаления перегруженных потоков
     def get_costs_to_adapt(self, flows_overloaded, metric):
@@ -468,65 +504,37 @@ class MultiPathRouting(app_manager.RyuApp):
         datapath.send_msg(mod)
     
     # Добавление потока в коммутатор
-    def install_flow(self, datapath, priority, match, actions, buffer_id=None):
+    def install_flow(self, datapath, priority, match, actions):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
                                              actions)]
-        if buffer_id:
-            mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
-                                    priority=priority, match=match,
-                                    instructions=inst)
-        else:
-            mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
+        mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
                                     match=match, instructions=inst)
         datapath.send_msg(mod)
 
-    # Вычисление стоимости путей
-    def calculate_weights_of_paths(self, metric, paths_edges):
-        paths_weights = []
-        for path_edges in paths_edges:
-            length = 0
-            for edge in path_edges:
-                u = edge[0]
-                v = edge[1]
-                length += metric[u][v]
-            paths_weights.append(float(length))
-        return paths_weights
-
     # Нормализация стоимости путей
     def normalize(self, paths_weights):
-        paths_weights = [100 if item == 0 else 1/item for item in paths_weights]
+        paths_weights = [MAX_VALUE if itm_pw == 0 else 1/itm_pw for itm_pw in paths_weights]
         total = sum(paths_weights)
-        weights_after_normalizing = [round(float(i)/total, 2) for i in paths_weights]
+        weights_after_normalizing = [round(float(itm_pw)/total, 2) for itm_pw in paths_weights]
         weights_after_normalizing[-1] += 1 - sum(weights_after_normalizing)
         weights_after_normalizing[-1] = round(weights_after_normalizing[-1], 2)
         return weights_after_normalizing
-
-    # Обновление стоимости путей
-    def update_weights_of_paths_cache(self, metric):
-        tmp_paths_dict = copy.deepcopy(self.paths_cache)
-        for key, path_info in tmp_paths_dict.items():
-            paths_nodes, paths_edges, paths_weights, x1, x2, x3, x4 = copy.deepcopy(path_info)
-            new_pw = self.calculate_weights_of_paths(metric, paths_edges)
-            self.paths_cache[key][2] = new_pw
-
-    # Выбор элемента на основе весов
-    def weighted_periodic_distribution(self, weights, n):
-        if n <= 0:
+    
+    def weighted_periodic_distribution(self, weights_rr, n_index):
+        weights = copy.deepcopy(weights_rr)
+        if not weights or n_index <= 0:
             return None
         total_weights = sum(weights)
-        if n > total_weights:
-            n = n % total_weights
-            if n == 0:
-                n = total_weights
+        n_index = n_index % total_weights or total_weights
         current_pick = 0
-        while sum(weights) > 0:
-            for i in range(len(weights)):
-                if weights[i] > 0:
+        for _ in range(total_weights):
+            for i, weight in enumerate(weights):
+                if weight > 0:
                     current_pick += 1
                     weights[i] -= 1
-                    if current_pick == n:
+                    if current_pick == n_index:
                         return i
         return None
 

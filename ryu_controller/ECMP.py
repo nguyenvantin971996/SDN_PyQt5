@@ -2,12 +2,12 @@ from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, set_ev_cls
 from ryu.ofproto import ofproto_v1_3
-from ryu.lib.packet import packet, arp, tcp, udp, ethernet, ipv4, ipv6
+from ryu.lib.packet import packet, arp, tcp, udp, ethernet, ipv4, ipv6, icmp
 from ryu.app.wsgi import WSGIApplication, ControllerBase, Response, route
 
 import json
 import copy
-from setting import K
+from setting import K, MAX_VALUE
 
 from delay_monitor import DelayMonitor
 from port_monitor import PortMonitor
@@ -65,7 +65,6 @@ class MultiPathRouting(app_manager.RyuApp):
     def _packet_in_handler(self, ev):
         msg = ev.msg
         datapath = msg.datapath
-        ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         in_port = msg.match['in_port']
         pkt = packet.Packet(msg.data)
@@ -74,6 +73,7 @@ class MultiPathRouting(app_manager.RyuApp):
         udp_pkt = pkt.get_protocol(udp.udp)
         tcp_pkt = pkt.get_protocol(tcp.tcp)
         ip_pkt = pkt.get_protocol(ipv4.ipv4)
+        icmp_pkt = pkt.get_protocol(icmp.icmp)
 
         if eth.ethertype == 35020:
             return
@@ -85,119 +85,189 @@ class MultiPathRouting(app_manager.RyuApp):
             return None
 
         mac_src = eth.src
-        mac_dst = eth.dst
         dpid = datapath.id
+
         if mac_src not in self.hosts_map:
             self.hosts_map[mac_src] = (dpid, in_port)
 
         # Обработка ARP
         if arp_pkt:
-            src_ip = arp_pkt.src_ip
-            dst_ip = arp_pkt.dst_ip
-            self.ip_to_mac_map[src_ip] = mac_src  # Обновляем карту IP-MAC
+            self.handle_arp(datapath, in_port, pkt, arp_pkt, msg)
+            return
+        
+        # Обработка ICMP
+        if icmp_pkt:
+            self.handle_icmp(datapath, in_port, pkt, ip_pkt, icmp_pkt, msg)
+            return
 
-            if arp_pkt.opcode == arp.ARP_REQUEST:
-                # Проверяем, известен ли MAC-адрес для запрашиваемого IP
-                if dst_ip in self.ip_to_mac_map:
-                    dst_mac = self.ip_to_mac_map[dst_ip]
-                    # Формируем ARP Reply
-                    arp_reply = packet.Packet()
-                    arp_reply.add_protocol(
-                        ethernet.ethernet(
-                            ethertype=eth.ethertype,
-                            src=dst_mac,
-                            dst=mac_src
-                        )
-                    )
-                    arp_reply.add_protocol(
-                        arp.arp(
-                            opcode=arp.ARP_REPLY,
-                            src_mac=dst_mac,
-                            src_ip=dst_ip,
-                            dst_mac=mac_src,
-                            dst_ip=src_ip
-                        )
-                    )
-                    arp_reply.serialize()
-                    # Отправляем ARP Reply обратно отправителю
-                    actions = [parser.OFPActionOutput(in_port)]
-                    out = parser.OFPPacketOut(
-                        datapath=datapath, buffer_id=ofproto.OFP_NO_BUFFER,
-                        in_port=ofproto.OFPP_CONTROLLER,
-                        actions=actions, data=arp_reply.data
-                    )
-                    datapath.send_msg(out)
-                else:
-                    # Если MAC-адрес неизвестен, отправляем пакет через FLOOD
-                    out_port = ofproto.OFPP_FLOOD
-                    actions = [parser.OFPActionOutput(out_port)]
-                    out = parser.OFPPacketOut(
-                        datapath=datapath, buffer_id=msg.buffer_id,
-                        in_port=in_port, actions=actions, data=msg.data
-                    )
-                    datapath.send_msg(out)
-            elif arp_pkt.opcode == arp.ARP_REPLY:
-                # Обработка ARP Reply: просто передаем дальше
-                if mac_dst in self.hosts_map:
-                    out_port = self.hosts_map[mac_dst][1]
-                    actions = [parser.OFPActionOutput(out_port)]
-                    out = parser.OFPPacketOut(
-                        datapath=datapath, buffer_id=msg.buffer_id,
-                        in_port=in_port, actions=actions, data=msg.data
-                    )
-                    datapath.send_msg(out)
-
-        # Обработка TCP и UDP пакетов
+        # Обработка TCP и UDP
         if tcp_pkt or udp_pkt:
-            src_ip = ip_pkt.src
-            dst_ip = ip_pkt.dst
-            src_sw_in_port = self.hosts_map[mac_src]
-            dst_sw_in_port = self.hosts_map[mac_dst]     
-            proto_type = 'tcp' if tcp_pkt else 'udp'
-            key = (src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], proto_type)
-            if key not in list(self.paths_cache.keys()):
-                paths_nodes, paths_edges, paths_weights = self.calculate_best_paths(src_sw_in_port[0], dst_sw_in_port[0])
-                normalized_weights = self.normalize(paths_weights)
-                src_dst = f"ECMP: {proto_type.upper()} {src_ip} --> {dst_ip}"
-                streams = []
-                initial_index = 0
-                streams.append((initial_index, tcp_pkt, udp_pkt))
-                self.paths_cache[key] = [paths_nodes, paths_edges, paths_weights, src_ip, dst_ip, src_dst, streams]
-                out_port = self.set_paths_tcp_udp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes, normalized_weights, initial_index, tcp_pkt, udp_pkt)
+            self.handle_tcp_udp(datapath, in_port, pkt, ip_pkt, tcp_pkt, udp_pkt, msg)
+            return
+            
+    def handle_arp(self, datapath, in_port, pkt, arp_pkt, msg):
+        parser = datapath.ofproto_parser
+        ofproto = datapath.ofproto
+        eth = pkt.get_protocol(ethernet.ethernet)
+        src_ip = arp_pkt.src_ip
+        dst_ip = arp_pkt.dst_ip
+        mac_src = eth.src
+        mac_dst = eth.dst
 
-                actions = [parser.OFPActionOutput(out_port)]
-                data = None
-                if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-                    data = msg.data
+        self.ip_to_mac_map[src_ip] = mac_src  # Обновляем карту IP-MAC
+
+        if arp_pkt.opcode == arp.ARP_REQUEST:
+            if dst_ip in self.ip_to_mac_map:
+                dst_mac = self.ip_to_mac_map[dst_ip]
+                # Формируем ARP Reply
+                arp_reply = packet.Packet()
+                arp_reply.add_protocol(
+                    ethernet.ethernet(
+                        ethertype=eth.ethertype,
+                        src=dst_mac,
+                        dst=mac_src
+                    )
+                )
+                arp_reply.add_protocol(
+                    arp.arp(
+                        opcode=arp.ARP_REPLY,
+                        src_mac=dst_mac,
+                        src_ip=dst_ip,
+                        dst_mac=mac_src,
+                        dst_ip=src_ip
+                    )
+                )
+                arp_reply.serialize()
+                actions = [parser.OFPActionOutput(in_port)]
                 out = parser.OFPPacketOut(
-                    datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,
-                    actions=actions, data=data)
+                    datapath=datapath, buffer_id=ofproto.OFP_NO_BUFFER,
+                    in_port=ofproto.OFPP_CONTROLLER,
+                    actions=actions, data=arp_reply.data
+                )
+                datapath.send_msg(out)
+            else:
+                actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
+                out = parser.OFPPacketOut(
+                    datapath=datapath, buffer_id=msg.buffer_id,
+                    in_port=in_port, actions=actions, data=msg.data
+                )
                 datapath.send_msg(out)
 
-            else:
-                [paths_nodes, paths_edges, paths_weights, x1, x2, x3, streams] = self.paths_cache[key]
-                normalized_weights = self.normalize(paths_weights)
-                index = streams[-1][0]
-                next_index = (index + 1) % len(paths_nodes)
-                self.paths_cache[key][-1].append((next_index, tcp_pkt, udp_pkt))
-                out_port = self.set_paths_tcp_udp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes, normalized_weights, next_index, tcp_pkt, udp_pkt)
-                
+        elif arp_pkt.opcode == arp.ARP_REPLY:
+            if mac_dst in self.hosts_map:
+                out_port = self.hosts_map[mac_dst][1]
                 actions = [parser.OFPActionOutput(out_port)]
-                data = None
-                if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-                    data = msg.data
                 out = parser.OFPPacketOut(
-                    datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,
-                    actions=actions, data=data)
+                    datapath=datapath, buffer_id=msg.buffer_id,
+                    in_port=in_port, actions=actions, data=msg.data
+                )
+                datapath.send_msg(out)
+
+    def handle_icmp(self, datapath, in_port, pkt, ip_pkt, icmp_pkt, msg):
+        parser = datapath.ofproto_parser
+        ofproto = datapath.ofproto
+        eth = pkt.get_protocol(ethernet.ethernet)
+        src_ip = ip_pkt.src
+        dst_ip = ip_pkt.dst
+        mac_src = eth.src
+        mac_dst = eth.dst
+
+        if icmp_pkt.type == icmp.ICMP_ECHO_REQUEST:
+            icmp_reply = packet.Packet()
+            icmp_reply.add_protocol(
+                ethernet.ethernet(
+                    ethertype=eth.ethertype,
+                    src=mac_dst,
+                    dst=mac_src
+                )
+            )
+            icmp_reply.add_protocol(
+                ipv4.ipv4(
+                    dst=src_ip,
+                    src=dst_ip,
+                    proto=ip_pkt.proto
+                )
+            )
+            icmp_reply.add_protocol(
+                icmp.icmp(
+                    type_=icmp.ICMP_ECHO_REPLY,
+                    code=icmp.ICMP_ECHO_REPLY_CODE,
+                    csum=0,
+                    data=icmp_pkt.data
+                )
+            )
+            icmp_reply.serialize()
+            actions = [parser.OFPActionOutput(in_port)]
+            out = parser.OFPPacketOut(
+                datapath=datapath, buffer_id=ofproto.OFP_NO_BUFFER,
+                in_port=ofproto.OFPP_CONTROLLER,
+                actions=actions, data=icmp_reply.data
+            )
+            datapath.send_msg(out)
+        else:
+            if mac_dst in self.hosts_map:
+                out_port = self.hosts_map[mac_dst][1]
+                actions = [parser.OFPActionOutput(out_port)]
+                out = parser.OFPPacketOut(
+                    datapath=datapath, buffer_id=msg.buffer_id,
+                    in_port=in_port, actions=actions, data=msg.data
+                )
                 datapath.send_msg(out)
     
+    def handle_tcp_udp(self, datapath, in_port, pkt, ip_pkt, tcp_pkt, udp_pkt, msg):
+        parser = datapath.ofproto_parser
+        ofproto = datapath.ofproto
+        eth = pkt.get_protocol(ethernet.ethernet)
+        src_ip = ip_pkt.src
+        dst_ip = ip_pkt.dst
+        mac_src = eth.src
+        mac_dst = eth.dst
+        src_sw_in_port = self.hosts_map[mac_src]
+        dst_sw_in_port = self.hosts_map[mac_dst]
+        
+        proto_type = 'tcp' if tcp_pkt else 'udp'
+        key = (src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], proto_type)
+
+        if key not in list(self.paths_cache.keys()):
+            paths_nodes, paths_edges, paths_weights = self.calculate_best_paths(src_sw_in_port[0], dst_sw_in_port[0])
+            src_dst = f"ECMP: {proto_type.upper()} {src_ip} --> {dst_ip}"
+            streams = []
+            initial_index = 0
+            streams.append((initial_index, tcp_pkt, udp_pkt))
+            self.paths_cache[key] = [paths_nodes, paths_edges, paths_weights, src_ip, dst_ip, src_dst, streams]
+            out_port = self.set_paths_tcp_udp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes, initial_index, tcp_pkt, udp_pkt)
+
+            actions = [parser.OFPActionOutput(out_port)]
+            data = None
+            if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+                data = msg.data
+            out = parser.OFPPacketOut(
+                datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,
+                actions=actions, data=data)
+            datapath.send_msg(out)
+
+        else:
+            [paths_nodes, paths_edges, paths_weights, x1, x2, x3, streams] = self.paths_cache[key]
+            index = streams[-1][0]
+            next_index = (index + 1) % len(paths_nodes)
+            self.paths_cache[key][-1].append((next_index, tcp_pkt, udp_pkt))
+            out_port = self.set_paths_tcp_udp(src_sw_in_port[0], src_sw_in_port[1], dst_sw_in_port[0], dst_sw_in_port[1], src_ip, dst_ip, paths_nodes, next_index, tcp_pkt, udp_pkt)
+            
+            actions = [parser.OFPActionOutput(out_port)]
+            data = None
+            if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+                data = msg.data
+            out = parser.OFPPacketOut(
+                datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,
+                actions=actions, data=data)
+            datapath.send_msg(out) 
+    
     # Установка потоков по IP для TCP и UDP
-    def set_paths_tcp_udp(self, src, in_port_src_sw, dst, out_port_dst_sw, ip_src, ip_dst, paths_nodes, paths_weights, index, tcp_pkt, udp_pkt):
+    def set_paths_tcp_udp(self, src, in_port_src_sw, dst, out_port_dst_sw, ip_src, ip_dst, paths_nodes, index, tcp_pkt, udp_pkt):
         paths_with_ports = self.paths_ports(paths_nodes, in_port_src_sw, out_port_dst_sw)
         selected_path = paths_with_ports[index]
         for node in selected_path:
             dp = self.topology_monitor.datapaths[node]
-            ofp = dp.ofproto
             ofp_parser = dp.ofproto_parser
             actions = []
             in_port = selected_path[node][0]
@@ -242,23 +312,18 @@ class MultiPathRouting(app_manager.RyuApp):
         return paths_p
     
     # Добавление потока в коммутатор
-    def install_flow(self, datapath, priority, match, actions, buffer_id=None):
+    def install_flow(self, datapath, priority, match, actions):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
                                              actions)]
-        if buffer_id:
-            mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
-                                    priority=priority, match=match,
-                                    instructions=inst)
-        else:
-            mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
+        mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
                                     match=match, instructions=inst)
         datapath.send_msg(mod)
 
     # Нормализация стоимости путей
     def normalize(self, paths_weights):
-        paths_weights = [100 if item == 0 else 1/item for item in paths_weights]
+        paths_weights = [MAX_VALUE if item == 0 else 1/item for item in paths_weights]
         total = sum(paths_weights)
         weights_after_normalizing = [round(float(i)/total, 2) for i in paths_weights]
         weights_after_normalizing[-1] += 1 - sum(weights_after_normalizing)
@@ -323,7 +388,7 @@ class NetworkStatRest(ControllerBase):
             i = 0
             for key, item in self.app.paths_cache.items():
                 if 'udp' in key:
-                    itm = item[:6]
+                    itm = item[:(len(item)-1)]
                     paths_cache[i] = itm
                     i += 1
         body = json.dumps(paths_cache)

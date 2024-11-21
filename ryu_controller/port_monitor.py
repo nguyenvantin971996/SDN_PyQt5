@@ -44,7 +44,7 @@ class PortMonitor(app_manager.RyuApp):
                     if lbi is not None and len(self.lbi_history) < LENGTH_LBI:
                         self.lbi_history.append(lbi)  # Сохранение LBI в истории
                     if len(self.lbi_history) == LENGTH_LBI:
-                        self.save_lbi_history_to_json("result/DAMLB.json")  # Сохранение истории в JSON
+                        self.save_lbi_history_to_json("result/DAMLB_10.json")  # Сохранение истории в JSON
 
                 hub.sleep(PORT_PERIOD)  # Пауза между циклами мониторинга
             except Exception as e:

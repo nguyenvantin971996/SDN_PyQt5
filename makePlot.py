@@ -102,8 +102,7 @@ def makePlotChart(fileNames):
                 avg_throughput = np.mean(result[fileName][1])
                 avg_loss = np.mean(result[fileName][2])
                 avg_throughput_str = f"{avg_throughput:.1f}"
-                avg_loss_str = f"{avg_loss:.1f}" 
-                # label_to_plot = f"{fileName} (Throughput={avg_throughput_str} Mbps, Loss={avg_loss_str}%)"
+                avg_loss_str = f"{avg_loss:.1f}"
                 label_to_plot_throughtput = f"{fileName} (Throughput={avg_throughput_str} Mbps)"
                 label_to_plot_loss= f"{fileName} (Loss={avg_loss_str}%)"
                 if fileName in styles:
@@ -236,45 +235,103 @@ def makePlotChart(fileNames):
             plt.show()
 
     except Exception as e:
-        dataPerFile = {}
-        fileLabels = [os.path.splitext(os.path.basename(fileName))[0] for fileName in fileNames]
 
-        for idx, fileName in enumerate(fileNames):
-            try:
-                with open(fileName, 'r') as file:
-                    data = json.load(file)
-                    dataPerFile[fileLabels[idx]] = data
-            except Exception as e:
-                print(f"Error reading file {fileName}: {e}")
-                continue
+        if len(fileNames) <= 5:
+            dataPerFile = {}
+            fileLabels = [os.path.splitext(os.path.basename(fileName))[0] for fileName in fileNames]
 
-        fig, ax = plt.subplots(figsize=(10, 5))
+            for idx, fileName in enumerate(fileNames):
+                try:
+                    with open(fileName, 'r') as file:
+                        data = json.load(file)
+                        dataPerFile[fileLabels[idx]] = data
+                except Exception as e:
+                    print(f"Error reading file {fileName}: {e}")
+                    continue
 
-        default_color_idx = len(labels)
+            fig, ax = plt.subplots(figsize=(10, 5))
+            default_color_idx = len(labels)
 
-        for label, values in dataPerFile.items():
-            moments = [PORT_PERIOD*t for t in range(len(values))]
-            if default_color_idx < len(colors):
-                style = {
-                    'color': colors[default_color_idx % len(colors)], 
-                    'marker': markers[default_color_idx % len(markers)], 
-                    'linestyle': linestyles[default_color_idx % len(linestyles)]
-                }
-                default_color_idx += 1
-            else:
-                style = {
-                    'color': random.choice(matplotlib_colors), 
-                    'marker': random.choice(matplotlib_markers), 
-                    'linestyle': random.choice(matplotlib_linestyles)
-                }
-            ax.plot(moments, values, linewidth=2, 
-                    linestyle=style['linestyle'], marker=style['marker'], 
-                    markersize=7, label=label, color=style['color'])
+            for label, values in dataPerFile.items():
+                moments = [PORT_PERIOD*t for t in range(len(values))]
+                if default_color_idx < len(colors):
+                    style = {
+                        'color': colors[default_color_idx % len(colors)], 
+                        'marker': markers[default_color_idx % len(markers)], 
+                        'linestyle': linestyles[default_color_idx % len(linestyles)]
+                    }
+                    default_color_idx += 1
+                else:
+                    style = {
+                        'color': random.choice(matplotlib_colors), 
+                        'marker': random.choice(matplotlib_markers), 
+                        'linestyle': random.choice(matplotlib_linestyles)
+                    }
+                ax.plot(moments, values, linewidth=2, 
+                        linestyle=style['linestyle'], marker=style['marker'], 
+                        markersize=7, label=label, color=style['color'])
 
-        ax.set_ylabel('Load balancing index (LBI)')
-        ax.set_xlabel('Time (seconds)')
-        ax.legend(loc="upper center", ncol=n_cols)
-        ax.grid()
-        fig.tight_layout()
-        plt.show()
+            ax.set_ylabel('Load balancing index (LBI)')
+            ax.set_xlabel('Time (seconds)')
+            ax.legend(loc="upper center", ncol=3)
+            ax.grid()
+            fig.tight_layout()
+            plt.show()
 
+        else:
+            data_by_algorithm = {}
+            for fileName in fileNames:
+                base_name = os.path.splitext(os.path.basename(fileName))[0]
+                parts = base_name.split('_')
+                algorithm_name = parts[0]
+                flow_number = int(parts[-1])
+
+                try:
+                    with open(fileName, 'r') as file:
+                        data = json.load(file)
+                        average_lbi = sum(data) / len(data) if data else 0
+                except Exception as e:
+                    print(f"Error reading file {fileName}: {e}")
+                    average_lbi = 0
+
+                if algorithm_name not in data_by_algorithm:
+                    data_by_algorithm[algorithm_name] = {"flows": [], "lbi": []}
+                data_by_algorithm[algorithm_name]["flows"].append(flow_number)
+                data_by_algorithm[algorithm_name]["lbi"].append(average_lbi)
+
+            fig, ax = plt.subplots(figsize=(10, 5))
+            default_color_idx = len(labels)
+            all_flow_numbers = set()
+
+            for algorithm, data in data_by_algorithm.items():
+                sorted_data = sorted(zip(data["flows"], data["lbi"]))
+                sorted_flows, sorted_lbis = zip(*sorted_data)
+                all_flow_numbers.update(sorted_flows)
+
+                if default_color_idx < len(colors):
+                    style = {
+                        'color': colors[default_color_idx % len(colors)],
+                        'marker': markers[default_color_idx % len(markers)],
+                        'linestyle': linestyles[default_color_idx % len(linestyles)]
+                    }
+                    default_color_idx += 1
+                else:
+                    style = {
+                        'color': random.choice(matplotlib_colors),
+                        'marker': random.choice(matplotlib_markers),
+                        'linestyle': random.choice(matplotlib_linestyles)
+                    }
+
+                ax.plot(sorted_flows, sorted_lbis, linewidth=2,
+                        linestyle=style['linestyle'], marker=style['marker'],
+                        markersize=7, label=algorithm, color=style['color'])
+                
+            sorted_all_flows = sorted(all_flow_numbers)  # Ensure flow numbers are sorted
+            ax.set_xticks(sorted_all_flows)
+            ax.set_xticklabels([str(flow) for flow in sorted_all_flows])
+            ax.set_ylabel('Average Load Balancing Index (LBI)')
+            ax.set_xlabel('Number of Flows')
+            ax.legend(loc="upper center", ncol=3)
+            ax.grid()
+            fig.tight_layout()
+            plt.show()
