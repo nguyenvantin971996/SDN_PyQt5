@@ -57,7 +57,7 @@ class MultiPathLoadBalancing(app_manager.RyuApp):
         self.WRR = {}
 
         # Запуск фоновой задачи для маршрутизации
-        self.adaptive_routing_thread = hub.spawn(self.adaptive_routing)
+        # self.adaptive_routing_thread = hub.spawn(self.adaptive_routing)
 
     # Обработка события при подключении нового коммутатора
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)

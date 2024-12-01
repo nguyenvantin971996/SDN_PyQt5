@@ -900,8 +900,8 @@ class MainWindow(QMainWindow):
                     QMessageBox.warning(self, "Mininet", "Can not start Mininet!")
 
                 self.timer.timeout.connect(lambda: self.showMetric(self.dynamic_metric.table_widget_1, 'throughput'))
-                self.timer.timeout.connect(lambda: self.showMetric(self.DynamicMetric.table_widget_2, 'latency'))
-                self.timer.timeout.connect(lambda: self.showMetric(self.DynamicMetric.table_widget_3, 'cost_2'))
+                self.timer.timeout.connect(lambda: self.showMetric(self.dynamic_metric.table_widget_2, 'latency'))
+                self.timer.timeout.connect(lambda: self.showMetric(self.dynamic_metric.table_widget_3, 'cost_2'))
                 
                 self.timer.timeout.connect(self.showPaths)
                 update_interval = 2000

@@ -86,18 +86,21 @@ class DelayMonitor(app_manager.RyuApp):
             latency = round((fwd_delay + re_delay - src_latency - dst_latency) * 1000 / 2)
             return max(latency, 0)
         except:
-            return float('inf')
+            return None
 
     # Создание и обновление задержек каналов между коммутаторами
     def create_link_latency(self):
+        new_latencies = {}
         for src in self.topology_monitor.graph:
+            new_latencies.setdefault(src, {})
             for dst in self.topology_monitor.graph[src]:
+                new_latencies[src].setdefault(dst, {})
                 if src == dst:
                     continue
                 latency = self.calculate_latency(src, dst)
-                if latency == float('inf'):
-                    latency = None 
-                self.topology_monitor.graph[src][dst]['latency'] = latency
+                new_latencies[src][dst] = latency
+        if new_latencies:
+            self.latencies.update(new_latencies)
 
     # Обработка входящих пакетов, особенно для обработки LLDP
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
@@ -106,6 +109,7 @@ class DelayMonitor(app_manager.RyuApp):
         try:
             src_dpid, src_port_no = LLDPPacket.lldp_parse(msg.data)
             dpid = msg.datapath.id
+
             if self.sw_module is None:
                 self.sw_module = lookup_service_brick('switches')
 
@@ -113,12 +117,18 @@ class DelayMonitor(app_manager.RyuApp):
                 if src_dpid == port.dpid and src_port_no == port.port_no:
                     delay = self.sw_module.ports[port].delay
                     self.save_lldp_delay(src=src_dpid, dst=dpid, lldpdelay=delay)
+                    
         except LLDPPacket.LLDPUnknownFormat as e:
             return
 
     # Сохранение задержки LLDP между двумя коммутаторами
     def save_lldp_delay(self, src=0, dst=0, lldpdelay=0):
-        self.topology_monitor.graph[src][dst]['lldpdelay'] = lldpdelay
+        try:
+            self.topology_monitor.graph[src][dst]['lldpdelay'] = lldpdelay
+        except:
+            if self.topology_monitor is None:
+                self.topology_monitor = lookup_service_brick('topology_monitor')
+            return
 
     # Получение данных о задержках
     def get_latency(self):
