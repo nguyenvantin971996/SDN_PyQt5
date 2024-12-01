@@ -1,13 +1,12 @@
 from mininet.net import Mininet
-from mininet.node import Controller, RemoteController, OVSKernelSwitch
+from mininet.node import RemoteController
 from mininet.cli import CLI
-from mininet.log import setLogLevel, info
+from mininet.log import setLogLevel
 from mininet.link import TCLink
 from functools import partial
 from mininet.topo import Topo
 from mininet.term import makeTerm
 from time import sleep
-from threading import Thread
 
 class MyTopo(Topo):
 	def build(self, **param):

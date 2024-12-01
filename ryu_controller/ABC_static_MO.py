@@ -43,13 +43,13 @@ class ABC:
 
     def create_solution(self):
         # Создание нового решения
-        newSolution = Solution()
+        new_solution = Solution()
         code = np.random.uniform(-1, 1, self.switches.size)  # Генерация случайного кода
         path = self.decode(code)  # Декодирование пути из кода
-        newSolution.code = code
-        newSolution.path = path
-        newSolution.fitness = self.evaluate(path)  # Оценка приспособленности
-        return newSolution
+        new_solution.code = code
+        new_solution.path = path
+        new_solution.fitness = self.evaluate(path)  # Оценка приспособленности
+        return new_solution
     
     def decode(self, code):
         # Декодирование кода в путь

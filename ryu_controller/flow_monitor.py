@@ -20,21 +20,21 @@ class FlowMonitor(app_manager.RyuApp):
         self.flow_stats = {}  # Статистика потоков
         self.switch_to_switch_flows = {}  # Потоки между коммутаторами
         self.switch_to_switch_flows_speed = {}  # Скорость потоков между коммутаторами
-        self.monitor_thread = hub.spawn(self._monitor)  # Запуск мониторинга в отдельном потоке
+        self.monitor_thread = hub.spawn(self.monitor)  # Запуск мониторинга в отдельном потоке
 
     # Основной цикл мониторинга, который собирает статистику потоков
-    def _monitor(self):
+    def monitor(self):
         while True:
             try:
-                for datapath in self.topology_monitor.datapaths.values():
-                    self._request_stats(datapath)  # Отправка запросов статистики потоков
+                if self.wait_for_topology_monitor_ready():
+                    self.collect_stats()
                 hub.sleep(FLOW_PERIOD)
             except Exception as e:
                 self.logger.error("Error in monitoring loop: %s", str(e))
                 continue
 
     # Проверка готовности монитора топологии
-    def _wait_for_topology_monitor_ready(self):
+    def wait_for_topology_monitor_ready(self):
         
         if self.topology_monitor is None:
             return False
@@ -46,9 +46,14 @@ class FlowMonitor(app_manager.RyuApp):
             return False
 
         return True
+    
+    # Сбор статистики потоков
+    def collect_stats(self):
+        for datapath in self.topology_monitor.datapaths.values():
+            self.request_stats(datapath)
 
     # Отправка запроса статистики потоков к коммутатору
-    def _request_stats(self, datapath):
+    def request_stats(self, datapath):
         self.logger.debug('send stats request: %016x', datapath.id)
         parser = datapath.ofproto_parser
         req = parser.OFPFlowStatsRequest(datapath)
@@ -56,7 +61,7 @@ class FlowMonitor(app_manager.RyuApp):
 
     # Обработка ответа на запрос статистики потоков
     @set_ev_cls(ofp_event.EventOFPFlowStatsReply, MAIN_DISPATCHER)
-    def _flow_stats_reply_handler(self, ev):
+    def flow_stats_reply_handler(self, ev):
         body = ev.msg.body
         dpid = ev.msg.datapath.id
 
@@ -94,13 +99,13 @@ class FlowMonitor(app_manager.RyuApp):
         flow_stat_history = self.switch_to_switch_flows[src][dst][key]
         if len(flow_stat_history) > 1:
             pre = flow_stat_history[-2][1]
-            period = self._calculate_period(
+            period = self.calculate_period(
                 flow_stat_history[-1][2], flow_stat_history[-1][3],
                 flow_stat_history[-2][2], flow_stat_history[-2][3]
             )
 
         now = flow_stat_history[-1][1] if flow_stat_history else 0
-        speed = round(self._calculate_speed(now, pre, period), 1)
+        speed = round(self.calculate_speed(now, pre, period), 1)
 
         self.switch_to_switch_flows_speed[src][dst][key] = speed
 
@@ -113,15 +118,15 @@ class FlowMonitor(app_manager.RyuApp):
             stats_dict[key].pop(0)
 
     # Расчет периода времени между двумя запросами статистики
-    def _calculate_period(self, n_sec, n_nsec, p_sec, p_nsec):
-        return self._get_time(n_sec, n_nsec) - self._get_time(p_sec, p_nsec)
+    def calculate_period(self, n_sec, n_nsec, p_sec, p_nsec):
+        return self.get_time(n_sec, n_nsec) - self.get_time(p_sec, p_nsec)
 
     # Преобразование времени в секундах и наносекундах в секунды
-    def _get_time(self, sec, nsec):
+    def get_time(self, sec, nsec):
         return sec + nsec / (10 ** 9)
 
     # Расчет скорости передачи данных
-    def _calculate_speed(self, now, pre, period):
+    def calculate_speed(self, now, pre, period):
         if period:
             return 8 * (now - pre) / (period * 10 ** 6)
         else:

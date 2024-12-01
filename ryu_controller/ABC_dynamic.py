@@ -40,10 +40,10 @@ class ABC:
         if self.population is None or self.best is None:
             self.best = []
             for path in self.paths_yen:
-                newSolution = Solution()
-                newSolution.path = np.array(path, dtype=int)
-                newSolution.fitness = self.evaluate(path)
-                self.best.append(newSolution)
+                new_solution = Solution()
+                new_solution.path = np.array(path, dtype=int)
+                new_solution.fitness = self.evaluate(path)
+                self.best.append(new_solution)
             self.best.sort(key=lambda x: x.fitness)
             self.make_change_best()
     
@@ -63,13 +63,13 @@ class ABC:
         self.make_change_best()
 
     def create_solution(self):
-        newSolution = Solution()
+        new_solution = Solution()
         code = np.random.uniform(-1, 1, self.switches.size)
         path = self.decode(code)
-        newSolution.code = code
-        newSolution.path = path
-        newSolution.fitness = self.evaluate(path)
-        return newSolution
+        new_solution.code = code
+        new_solution.path = path
+        new_solution.fitness = self.evaluate(path)
+        return new_solution
     
     def decode(self, code):
         path = [self.src]

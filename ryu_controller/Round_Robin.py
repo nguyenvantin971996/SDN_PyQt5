@@ -14,9 +14,9 @@ from port_monitor import PortMonitor
 from topology_monitor import TopologyMonitor
 from flow_monitor import FlowMonitor
 
-from YenAlgorithm import YenAlgorithm
+from Yen_algorithm import YenAlgorithm
 
-class MultiPathRouting(app_manager.RyuApp):
+class MultiPathLoadBalancing(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
     _CONTEXTS = {
@@ -29,8 +29,8 @@ class MultiPathRouting(app_manager.RyuApp):
 
     def __init__(self, *_args, **_kwargs):
 
-        super(MultiPathRouting, self).__init__(*_args, **_kwargs)
-        self.name = 'multipath_routing'
+        super(MultiPathLoadBalancing, self).__init__(*_args, **_kwargs)
+        self.name = 'multipath_load_balancing'
         
         wsgi: WSGIApplication = _kwargs['wsgi']
         wsgi.register(NetworkStatRest, {'rest_api_app': self})
@@ -341,7 +341,7 @@ class NetworkStatRest(ControllerBase):
 
     def __init__(self, req, link, data, **config):
         super(NetworkStatRest, self).__init__(req, link, data, **config)
-        self.app: MultiPathRouting = data['rest_api_app']
+        self.app: MultiPathLoadBalancing = data['rest_api_app']
 
     @route('rest_api_app', '/', methods=['GET'])
     def hello(self, req, **_kwargs):

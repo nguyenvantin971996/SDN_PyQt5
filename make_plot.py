@@ -23,8 +23,8 @@ plt.rcParams['savefig.dpi'] = 200
 plt.rcParams['savefig.bbox'] = 'tight'
 plt.rcParams['savefig.directory'] = '/home/tin/SDN_PyQt5/result'
 
-def makePlotChart(fileNames):
-    fileNames = sorted(fileNames)
+def makePlotChart(file_names):
+    file_names = sorted(file_names)
     styles = {label: {'color': colors[i % len(colors)], 
                   'marker': markers[i % len(markers)], 
                   'linestyle': linestyles[i % len(linestyles)]} 
@@ -34,8 +34,8 @@ def makePlotChart(fileNames):
     other_lines = []
     other_labels = []
     n_cols = None
-    if len(fileNames)%3==0:
-        if len(fileNames)==3:
+    if len(file_names)%3==0:
+        if len(file_names)==3:
             n_cols = 1
         else:
             n_cols = 3
@@ -43,20 +43,20 @@ def makePlotChart(fileNames):
         n_cols = 2
     try:
         result = {}
-        maxThr = 0
-        minThr = 1000000
+        max_throughput = 0
+        min_throughput = 1000000
         isUDP = False
-        for i, fileName in enumerate(fileNames):
+        for i, file_name in enumerate(file_names):
             try:
-                with open(fileName, 'r') as file:
+                with open(file_name, 'r') as file:
                     data = json.load(file)
             except Exception as e:
                 print(f"Error reading file: {e}")
                 return
 
-            ends, throughputs, lossPercent, jitter = [], [], [], []
-            fileName0 = os.path.basename(fileName)
-            fileName = os.path.splitext(fileName0)[0]
+            ends, throughputs, loss_percent, jitter = [], [], [], []
+            file_name_0 = os.path.basename(file_name)
+            file_name = os.path.splitext(file_name_0)[0]
             
             for item in data.get('intervals', []):
                 ends.append(item['sum'].get('end', 0))
@@ -80,37 +80,37 @@ def makePlotChart(fileNames):
                         streamLosses.append(calculated_loss)
                     
                     average_loss = sum(streamLosses) / len(streamLosses)
-                    lossPercent.append(average_loss)
+                    loss_percent.append(average_loss)
                 
                 if "jitter_ms" in item['streams'][0]:
                     average_jitter = sum([stream.get('jitter_ms', 0) for stream in item['streams']]) / len(item['streams'])
                     jitter.append(average_jitter)
             
-            if maxThr <= max(throughputs):
-                maxThr = max(throughputs)
-            if minThr >= min(throughputs):
-                minThr = min(throughputs)
+            if max_throughput <= max(throughputs):
+                max_throughput = max(throughputs)
+            if min_throughput >= min(throughputs):
+                min_throughput = min(throughputs)
             
-            result[fileName] = (ends, throughputs, lossPercent, jitter)
+            result[file_name] = (ends, throughputs, loss_percent, jitter)
         if isUDP:
             # fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 15))
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
             default_color_idx = len(labels)
-            for i, fileName in enumerate(fileNames):
-                fileName0 = os.path.basename(fileName)
-                fileName = os.path.splitext(fileName0)[0]
-                avg_throughput = np.mean(result[fileName][1])
-                avg_loss = np.mean(result[fileName][2])
+            for i, file_name in enumerate(file_names):
+                file_name_0 = os.path.basename(file_name)
+                file_name = os.path.splitext(file_name_0)[0]
+                avg_throughput = np.mean(result[file_name][1])
+                avg_loss = np.mean(result[file_name][2])
                 avg_throughput_str = f"{avg_throughput:.1f}"
                 avg_loss_str = f"{avg_loss:.1f}"
-                label_to_plot_throughtput = f"{fileName} (Throughput={avg_throughput_str} Mbps)"
-                label_to_plot_loss= f"{fileName} (Loss={avg_loss_str}%)"
-                if fileName in styles:
-                    style = styles[fileName]
-                    line, = ax1.plot(result[fileName][0], result[fileName][1], 
+                label_to_plot_throughtput = f"{file_name} (Throughput={avg_throughput_str} Mbps)"
+                label_to_plot_loss= f"{file_name} (Loss={avg_loss_str}%)"
+                if file_name in styles:
+                    style = styles[file_name]
+                    line, = ax1.plot(result[file_name][0], result[file_name][1], 
                                     linewidth=2, linestyle=style['linestyle'], 
                                     marker=style['marker'], markersize=7, color=style['color'])
-                    label_idx = labels.index(fileName)
+                    label_idx = labels.index(file_name)
                     legend_lines[label_idx] = line
                     legend_labels[label_idx] = [label_to_plot_throughtput, label_to_plot_loss]
                     
@@ -125,12 +125,12 @@ def makePlotChart(fileNames):
                         'marker': random.choice(matplotlib_markers), 
                         'linestyle': random.choice(matplotlib_linestyles)}
 
-                    line, = ax1.plot(result[fileName][0], result[fileName][1], 
+                    line, = ax1.plot(result[file_name][0], result[file_name][1], 
                                         linewidth=2, linestyle=style['linestyle'], 
                                         marker=style['marker'], markersize=7, color=style['color'])
                     other_lines.append(line)
                     other_labels.append([label_to_plot_throughtput, label_to_plot_loss])
-                    styles[fileName] = style
+                    styles[file_name] = style
 
             valid_legend_lines = [line for line in legend_lines if line is not None]
             combined_lines = valid_legend_lines + other_lines
@@ -148,33 +148,33 @@ def makePlotChart(fileNames):
             ax1.set_ylabel('Throughput (Mbps)')
             ax1.set_xlabel('Time (seconds)')
             ax1.grid()
-            ax1.set_ylim(minThr * 0.5, maxThr * 1.4)
+            ax1.set_ylim(min_throughput * 0.5, max_throughput * 1.4)
 
-            for i, fileName in enumerate(fileNames):
-                fileName0 = os.path.basename(fileName)
-                fileName = os.path.splitext(fileName0)[0]
+            for i, file_name in enumerate(file_names):
+                file_name_0 = os.path.basename(file_name)
+                file_name = os.path.splitext(file_name_0)[0]
 
-                style = styles[fileName]
+                style = styles[file_name]
 
-                ax2.plot(result[fileName][0], result[fileName][2], 
+                ax2.plot(result[file_name][0], result[file_name][2], 
                          linewidth=2, linestyle=style['linestyle'], 
                          marker=style['marker'], markersize=7, 
-                         label=fileName, color=style['color'])
+                         label=file_name, color=style['color'])
                 
             ax2.legend(combined_lines, combined_labels_loss, loc="upper right", ncol=n_cols)
             ax2.set_ylabel('Packet loss rate (%)')
             ax2.set_xlabel('Time (seconds)')
             ax2.grid()
 
-            # for i, fileName in enumerate(fileNames):
-            #     fileName0 = os.path.basename(fileName)
-            #     fileName = os.path.splitext(fileName0)[0]
-            #     style = styles[fileName]
+            # for i, file_name in enumerate(file_names):
+            #     file_name_0 = os.path.basename(file_name)
+            #     file_name = os.path.splitext(file_name_0)[0]
+            #     style = styles[file_name]
 
-            #     ax3.plot(result[fileName][0], result[fileName][3], 
+            #     ax3.plot(result[file_name][0], result[file_name][3], 
             #              linewidth=2, linestyle=style['linestyle'], 
             #              marker=style['marker'], markersize=7, 
-            #              label=fileName, color=style['color'])
+            #              label=file_name, color=style['color'])
             # ax3.legend(combined_lines, combined_labels, loc="upper right", ncol=n_cols)
             # ax3.set_ylabel('Jitter (ms)')
             # ax3.set_xlabel('Time (seconds)')
@@ -187,19 +187,19 @@ def makePlotChart(fileNames):
             fig, ax1 = plt.subplots(figsize=(10, 5))
 
             default_color_idx = len(labels)
-            for i, fileName in enumerate(fileNames):
-                fileName0 = os.path.basename(fileName)
-                fileName = os.path.splitext(fileName0)[0]
+            for i, file_name in enumerate(file_names):
+                file_name_0 = os.path.basename(file_name)
+                file_name = os.path.splitext(file_name_0)[0]
 
-                if fileName in styles:
-                        style = styles[fileName]
-                        line, = ax1.plot(result[fileName][0], result[fileName][1], 
+                if file_name in styles:
+                        style = styles[file_name]
+                        line, = ax1.plot(result[file_name][0], result[file_name][1], 
                                         linewidth=2, linestyle=style['linestyle'], 
                                         marker=style['marker'], markersize=7, 
-                                        label=fileName, color=style['color'])
-                        label_idx = labels.index(fileName)
+                                        label=file_name, color=style['color'])
+                        label_idx = labels.index(file_name)
                         legend_lines[label_idx] = line
-                        legend_labels[label_idx] = fileName
+                        legend_labels[label_idx] = file_name
                 else:
                     if default_color_idx < len(colors):
                         style = {'color': colors[default_color_idx % len(colors)], 
@@ -211,12 +211,12 @@ def makePlotChart(fileNames):
                         'marker': random.choice(matplotlib_markers), 
                         'linestyle': random.choice(matplotlib_linestyles)}
 
-                    line, = ax1.plot(result[fileName][0], result[fileName][1], 
+                    line, = ax1.plot(result[file_name][0], result[file_name][1], 
                                         linewidth=2, linestyle=style['linestyle'], 
                                         marker=style['marker'], markersize=7, 
-                                        label=fileName, color=style['color'])
+                                        label=file_name, color=style['color'])
                     other_lines.append(line)
-                    other_labels.append(fileName)
+                    other_labels.append(file_name)
             valid_legend_lines = [line for line in legend_lines if line is not None]
             valid_legend_labels = [label for line, label in zip(legend_lines, legend_labels) if line is not None]
 
@@ -229,30 +229,30 @@ def makePlotChart(fileNames):
             ax1.set_ylabel('Throughput (Mbps)')
             ax1.set_xlabel('Time (seconds)')
             ax1.grid()
-            ax1.set_ylim(minThr * 0.5, maxThr * 1.2)
+            ax1.set_ylim(min_throughput * 0.5, max_throughput * 1.2)
 
             fig.tight_layout()
             plt.show()
 
     except Exception as e:
 
-        if len(fileNames) <= 5:
-            dataPerFile = {}
-            fileLabels = [os.path.splitext(os.path.basename(fileName))[0] for fileName in fileNames]
+        if len(file_names) <= 5:
+            data_per_file = {}
+            file_labels = [os.path.splitext(os.path.basename(file_name))[0] for file_name in file_names]
 
-            for idx, fileName in enumerate(fileNames):
+            for idx, file_name in enumerate(file_names):
                 try:
-                    with open(fileName, 'r') as file:
+                    with open(file_name, 'r') as file:
                         data = json.load(file)
-                        dataPerFile[fileLabels[idx]] = data
+                        data_per_file[file_labels[idx]] = data
                 except Exception as e:
-                    print(f"Error reading file {fileName}: {e}")
+                    print(f"Error reading file {file_name}: {e}")
                     continue
 
             fig, ax = plt.subplots(figsize=(10, 5))
             default_color_idx = len(labels)
 
-            for label, values in dataPerFile.items():
+            for label, values in data_per_file.items():
                 moments = [PORT_PERIOD*t for t in range(len(values))]
                 if default_color_idx < len(colors):
                     style = {
@@ -280,18 +280,18 @@ def makePlotChart(fileNames):
 
         else:
             data_by_algorithm = {}
-            for fileName in fileNames:
-                base_name = os.path.splitext(os.path.basename(fileName))[0]
+            for file_name in file_names:
+                base_name = os.path.splitext(os.path.basename(file_name))[0]
                 parts = base_name.split('_')
-                algorithm_name = parts[0]
+                algorithm_name = "_".join(parts[:-1])
                 flow_number = int(parts[-1])
 
                 try:
-                    with open(fileName, 'r') as file:
+                    with open(file_name, 'r') as file:
                         data = json.load(file)
                         average_lbi = sum(data) / len(data) if data else 0
                 except Exception as e:
-                    print(f"Error reading file {fileName}: {e}")
+                    print(f"Error reading file {file_name}: {e}")
                     average_lbi = 0
 
                 if algorithm_name not in data_by_algorithm:

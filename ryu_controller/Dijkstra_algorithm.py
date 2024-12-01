@@ -19,7 +19,7 @@ class DijkstraAlgorithm:
         unvisited_vertices = self.switches.copy()
 
         while unvisited_vertices:
-            current_vertex = self._find_nearest_vertex(unvisited_vertices)
+            current_vertex = self.find_nearest_vertex(unvisited_vertices)
             if current_vertex is None:
                 break
             unvisited_vertices.remove(current_vertex)
@@ -31,12 +31,12 @@ class DijkstraAlgorithm:
                         self.distance[neighbor] = new_distance
                         self.previous[neighbor] = current_vertex
                     elif new_distance == self.distance[neighbor]:
-                        if self._compare_lexicographically(current_vertex, self.previous[neighbor]):
+                        if self.compare_lexicographically(current_vertex, self.previous[neighbor]):
                             self.previous[neighbor] = current_vertex
 
-        return self._recover_path(dst)
+        return self.recover_path(dst)
 
-    def _find_nearest_vertex(self, unvisited):
+    def find_nearest_vertex(self, unvisited):
         nearest_vertex = None
         min_distance = MAX_VALUE
         for vertex in unvisited:
@@ -48,7 +48,7 @@ class DijkstraAlgorithm:
                     nearest_vertex = vertex
         return nearest_vertex
 
-    def _recover_path(self, dst):
+    def recover_path(self, dst):
         if self.distance[dst] == MAX_VALUE:
             return []
 
@@ -59,9 +59,9 @@ class DijkstraAlgorithm:
             current_vertex = self.previous[current_vertex]
         return path[::-1]
     
-    def _compare_lexicographically(self, vertex1, vertex2):
-        if vertex1 is None:
+    def compare_lexicographically(self, vertex_1, vertex_2):
+        if vertex_1 is None:
             return False
-        if vertex2 is None:
+        if vertex_2 is None:
             return True
-        return vertex1 < vertex2
+        return vertex_1 < vertex_2

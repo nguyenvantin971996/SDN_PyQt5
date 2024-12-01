@@ -25,57 +25,64 @@ class DelayMonitor(app_manager.RyuApp):
         self.echo_latency = {}  # Словарь для хранения задержек echo-запросов
         self.latencies = {}  # Словарь для хранения задержек каналов
         self.sending_echo_request_interval = 0.05  # Интервал между echo-запросами
-        self.measure_thread = hub.spawn(self._detector)  # Запуск потока измерений
+        self.monitor_thread = hub.spawn(self.monitor)  # Запуск потока измерений
 
     # Основной цикл мониторинга задержек
-    def _detector(self):
+    def monitor(self):
         while True:
-            self._send_echo_request()
-            self.create_link_latency()
-            hub.sleep(DELAY_PERIOD)
+            try:
+                if self.wait_for_topology_monitor_ready():
+                    self.send_echo_request()
+                    self.create_link_latency()
+                hub.sleep(DELAY_PERIOD)
+            except Exception as e:
+                self.logger.error("Error in monitoring loop: %s", str(e))
+                continue
+    
+    # Проверка готовности монитора топологии
+    def wait_for_topology_monitor_ready(self):
+        
+        if self.topology_monitor is None:
+            return False
+
+        if not self.topology_monitor.datapaths:
+            return False
+
+        if not hasattr(self.topology_monitor, 'graph') or not self.topology_monitor.graph:
+            return False
+
+        return True
 
     # Отправка echo-запросов для каждого коммутатора
-    def _send_echo_request(self):
-        if self.topology_monitor is not None:
-            try:
-                for datapath in list(self.topology_monitor.datapaths.values()):
-                    parser = datapath.ofproto_parser
+    def send_echo_request(self):
+        for datapath in list(self.topology_monitor.datapaths.values()):
+            parser = datapath.ofproto_parser
 
-                    # Временная метка для запроса
-                    data_time = "%.12f" % time.time()
-                    byte_arr = bytearray(data_time.encode())  # Преобразование в байтовый массив
+            data_time = "%.12f" % time.time()
+            byte_arr = bytearray(data_time.encode())
 
-                    echo_req = parser.OFPEchoRequest(datapath, data=byte_arr)
-                    datapath.send_msg(echo_req)  # Отправка сообщения echo-запроса
+            echo_req = parser.OFPEchoRequest(datapath, data=byte_arr)
+            datapath.send_msg(echo_req)
 
-                    hub.sleep(self.sending_echo_request_interval)  # Пауза между запросами
-            
-            except Exception as e:
-                self.logger.error("Error sending echo request: %s", e)
-        else:
-            self.topology_monitor = lookup_service_brick('topology_monitor')
-            return
+            hub.sleep(self.sending_echo_request_interval)
 
     # Обработка ответа на echo-запрос
     @set_ev_cls(ofp_event.EventOFPEchoReply, MAIN_DISPATCHER)
     def echo_reply_handler(self, ev):
         now_timestamp = time.time()
         try:
-            # Расчет задержки на основе времени запроса и ответа
             latency = now_timestamp - eval(ev.msg.data)
-            self.echo_latency[ev.msg.datapath.id] = latency  # Сохранение задержки для коммутатора
+            self.echo_latency[ev.msg.datapath.id] = latency
         except:
             return
 
     # Расчет общей задержки между двумя коммутаторами
     def calculate_latency(self, src, dst):
         try:
-            fwd_delay = self.topology_monitor.graph[src][dst]['lldpdelay']  # Прямая задержка LLDP
-            re_delay = self.topology_monitor.graph[dst][src]['lldpdelay']  # Обратная задержка LLDP
-            src_latency = self.echo_latency[src]  # Echo-задержка источника
-            dst_latency = self.echo_latency[dst]  # Echo-задержка назначения
-
-            # Общая задержка
+            fwd_delay = self.topology_monitor.graph[src][dst]['lldpdelay']
+            re_delay = self.topology_monitor.graph[dst][src]['lldpdelay']
+            src_latency = self.echo_latency[src]
+            dst_latency = self.echo_latency[dst]
             latency = round((fwd_delay + re_delay - src_latency - dst_latency) * 1000 / 2)
             return max(latency, 0)
         except:
@@ -83,19 +90,14 @@ class DelayMonitor(app_manager.RyuApp):
 
     # Создание и обновление задержек каналов между коммутаторами
     def create_link_latency(self):
-        try:
-            for src in self.topology_monitor.graph:
-                for dst in self.topology_monitor.graph[src]:
-                    if src == dst:
-                        continue
-                    latency = self.calculate_latency(src, dst)  # Расчет задержки
-                    if latency == float('inf'):
-                        latency = None  # Если задержка не определена
-                    self.topology_monitor.graph[src][dst]['latency'] = latency  # Сохранение задержки
-        except:
-            if self.topology_monitor is None:
-                self.topology_monitor = lookup_service_brick('topology_monitor')
-            return
+        for src in self.topology_monitor.graph:
+            for dst in self.topology_monitor.graph[src]:
+                if src == dst:
+                    continue
+                latency = self.calculate_latency(src, dst)
+                if latency == float('inf'):
+                    latency = None 
+                self.topology_monitor.graph[src][dst]['latency'] = latency
 
     # Обработка входящих пакетов, особенно для обработки LLDP
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
@@ -110,18 +112,13 @@ class DelayMonitor(app_manager.RyuApp):
             for port in self.sw_module.ports.keys():
                 if src_dpid == port.dpid and src_port_no == port.port_no:
                     delay = self.sw_module.ports[port].delay
-                    self._save_lldp_delay(src=src_dpid, dst=dpid, lldpdelay=delay)
+                    self.save_lldp_delay(src=src_dpid, dst=dpid, lldpdelay=delay)
         except LLDPPacket.LLDPUnknownFormat as e:
             return
 
     # Сохранение задержки LLDP между двумя коммутаторами
-    def _save_lldp_delay(self, src=0, dst=0, lldpdelay=0):
-        try:
-            self.topology_monitor.graph[src][dst]['lldpdelay'] = lldpdelay
-        except:
-            if self.topology_monitor is None:
-                self.topology_monitor = lookup_service_brick('topology_monitor')
-            return
+    def save_lldp_delay(self, src=0, dst=0, lldpdelay=0):
+        self.topology_monitor.graph[src][dst]['lldpdelay'] = lldpdelay
 
     # Получение данных о задержках
     def get_latency(self):

@@ -1,7 +1,7 @@
 {
     "controllers": [
         {
-            "nameClass": "Controller",
+            "name_class": "Controller",
             "name": "C1",
             "id": 1,
             "ip": "127.0.0.1",
@@ -15,198 +15,198 @@
     ],
     "switches": [
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S1",
             "id": 1,
             "center": [
                 314,
                 519
             ],
-            "numberPorts": 6
+            "number_ports": 6
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S2",
             "id": 2,
             "center": [
                 514,
                 243
             ],
-            "numberPorts": 3
+            "number_ports": 3
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S3",
             "id": 3,
             "center": [
                 952,
                 172
             ],
-            "numberPorts": 2
+            "number_ports": 2
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S4",
             "id": 4,
             "center": [
                 1369,
                 243
             ],
-            "numberPorts": 3
+            "number_ports": 3
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S5",
             "id": 5,
             "center": [
                 514,
                 808
             ],
-            "numberPorts": 3
+            "number_ports": 3
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S6",
             "id": 6,
             "center": [
                 952,
                 871
             ],
-            "numberPorts": 2
+            "number_ports": 2
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S7",
             "id": 7,
             "center": [
                 1369,
                 808
             ],
-            "numberPorts": 3
+            "number_ports": 3
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S8",
             "id": 8,
             "center": [
                 785,
                 680
             ],
-            "numberPorts": 4
+            "number_ports": 4
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S9",
             "id": 9,
             "center": [
                 785,
                 359
             ],
-            "numberPorts": 3
+            "number_ports": 3
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S10",
             "id": 10,
             "center": [
                 1106,
                 359
             ],
-            "numberPorts": 4
+            "number_ports": 4
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S11",
             "id": 11,
             "center": [
                 1106,
                 680
             ],
-            "numberPorts": 3
+            "number_ports": 3
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S12",
             "id": 12,
             "center": [
                 639,
                 519
             ],
-            "numberPorts": 3
+            "number_ports": 3
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S13",
             "id": 13,
             "center": [
                 1242,
                 519
             ],
-            "numberPorts": 3
+            "number_ports": 3
         },
         {
-            "nameClass": "Switch",
+            "name_class": "Switch",
             "name": "S14",
             "id": 14,
             "center": [
                 1570,
                 519
             ],
-            "numberPorts": 6
+            "number_ports": 6
         }
     ],
     "hosts": [
         {
-            "nameClass": "Host",
+            "name_class": "Host",
             "name": "H1",
             "id": 1,
             "ip": "10.0.0.1",
             "mac": "00:00:00:00:00:01",
-            "numberPorts": 1,
+            "number_ports": 1,
             "center": [
                 314,
                 808
             ],
-            "server": 1,
+            "is_server": 1,
             "command": ""
         },
         {
-            "nameClass": "Host",
+            "name_class": "Host",
             "name": "H2",
             "id": 2,
             "ip": "10.0.0.2",
             "mac": "00:00:00:00:00:02",
-            "numberPorts": 1,
+            "number_ports": 1,
             "center": [
                 1570,
                 808
             ],
-            "server": 1,
+            "is_server": 1,
             "command": ""
         }
     ],
     "links": [
         {
             "id": 1,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S1",
                 "id": 1,
                 "center": [
                     314,
                     519
                 ],
-                "numberPorts": 6
+                "number_ports": 6
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S2",
                 "id": 2,
                 "center": [
                     514,
                     243
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 1,
@@ -219,25 +219,25 @@
         },
         {
             "id": 2,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S2",
                 "id": 2,
                 "center": [
                     514,
                     243
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S3",
                 "id": 3,
                 "center": [
                     952,
                     172
                 ],
-                "numberPorts": 2
+                "number_ports": 2
             },
             "port": [
                 2,
@@ -250,25 +250,25 @@
         },
         {
             "id": 3,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S3",
                 "id": 3,
                 "center": [
                     952,
                     172
                 ],
-                "numberPorts": 2
+                "number_ports": 2
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S4",
                 "id": 4,
                 "center": [
                     1369,
                     243
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 2,
@@ -281,25 +281,25 @@
         },
         {
             "id": 5,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S1",
                 "id": 1,
                 "center": [
                     314,
                     519
                 ],
-                "numberPorts": 6
+                "number_ports": 6
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S5",
                 "id": 5,
                 "center": [
                     514,
                     808
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 2,
@@ -312,25 +312,25 @@
         },
         {
             "id": 6,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S5",
                 "id": 5,
                 "center": [
                     514,
                     808
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S6",
                 "id": 6,
                 "center": [
                     952,
                     871
                 ],
-                "numberPorts": 2
+                "number_ports": 2
             },
             "port": [
                 2,
@@ -343,25 +343,25 @@
         },
         {
             "id": 7,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S6",
                 "id": 6,
                 "center": [
                     952,
                     871
                 ],
-                "numberPorts": 2
+                "number_ports": 2
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S7",
                 "id": 7,
                 "center": [
                     1369,
                     808
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 2,
@@ -374,25 +374,25 @@
         },
         {
             "id": 9,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S1",
                 "id": 1,
                 "center": [
                     314,
                     519
                 ],
-                "numberPorts": 6
+                "number_ports": 6
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S9",
                 "id": 9,
                 "center": [
                     785,
                     359
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 3,
@@ -405,25 +405,25 @@
         },
         {
             "id": 10,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S1",
                 "id": 1,
                 "center": [
                     314,
                     519
                 ],
-                "numberPorts": 6
+                "number_ports": 6
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S8",
                 "id": 8,
                 "center": [
                     785,
                     680
                 ],
-                "numberPorts": 4
+                "number_ports": 4
             },
             "port": [
                 4,
@@ -436,25 +436,25 @@
         },
         {
             "id": 13,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S9",
                 "id": 9,
                 "center": [
                     785,
                     359
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S10",
                 "id": 10,
                 "center": [
                     1106,
                     359
                 ],
-                "numberPorts": 4
+                "number_ports": 4
             },
             "port": [
                 2,
@@ -467,25 +467,25 @@
         },
         {
             "id": 14,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S8",
                 "id": 8,
                 "center": [
                     785,
                     680
                 ],
-                "numberPorts": 4
+                "number_ports": 4
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S11",
                 "id": 11,
                 "center": [
                     1106,
                     680
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 2,
@@ -498,25 +498,25 @@
         },
         {
             "id": 15,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S5",
                 "id": 5,
                 "center": [
                     514,
                     808
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S8",
                 "id": 8,
                 "center": [
                     785,
                     680
                 ],
-                "numberPorts": 4
+                "number_ports": 4
             },
             "port": [
                 3,
@@ -529,25 +529,25 @@
         },
         {
             "id": 16,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S11",
                 "id": 11,
                 "center": [
                     1106,
                     680
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S7",
                 "id": 7,
                 "center": [
                     1369,
                     808
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 2,
@@ -560,25 +560,25 @@
         },
         {
             "id": 17,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S2",
                 "id": 2,
                 "center": [
                     514,
                     243
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S9",
                 "id": 9,
                 "center": [
                     785,
                     359
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 3,
@@ -591,25 +591,25 @@
         },
         {
             "id": 18,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S4",
                 "id": 4,
                 "center": [
                     1369,
                     243
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S10",
                 "id": 10,
                 "center": [
                     1106,
                     359
                 ],
-                "numberPorts": 4
+                "number_ports": 4
             },
             "port": [
                 2,
@@ -622,25 +622,25 @@
         },
         {
             "id": 19,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S1",
                 "id": 1,
                 "center": [
                     314,
                     519
                 ],
-                "numberPorts": 6
+                "number_ports": 6
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S12",
                 "id": 12,
                 "center": [
                     639,
                     519
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 5,
@@ -653,25 +653,25 @@
         },
         {
             "id": 21,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S13",
                 "id": 13,
                 "center": [
                     1242,
                     519
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S14",
                 "id": 14,
                 "center": [
                     1570,
                     519
                 ],
-                "numberPorts": 6
+                "number_ports": 6
             },
             "port": [
                 1,
@@ -684,25 +684,25 @@
         },
         {
             "id": 22,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S14",
                 "id": 14,
                 "center": [
                     1570,
                     519
                 ],
-                "numberPorts": 6
+                "number_ports": 6
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S4",
                 "id": 4,
                 "center": [
                     1369,
                     243
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 2,
@@ -715,25 +715,25 @@
         },
         {
             "id": 23,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S14",
                 "id": 14,
                 "center": [
                     1570,
                     519
                 ],
-                "numberPorts": 6
+                "number_ports": 6
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S7",
                 "id": 7,
                 "center": [
                     1369,
                     808
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 3,
@@ -746,25 +746,25 @@
         },
         {
             "id": 24,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S14",
                 "id": 14,
                 "center": [
                     1570,
                     519
                 ],
-                "numberPorts": 6
+                "number_ports": 6
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S11",
                 "id": 11,
                 "center": [
                     1106,
                     680
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 4,
@@ -777,25 +777,25 @@
         },
         {
             "id": 25,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S14",
                 "id": 14,
                 "center": [
                     1570,
                     519
                 ],
-                "numberPorts": 6
+                "number_ports": 6
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S10",
                 "id": 10,
                 "center": [
                     1106,
                     359
                 ],
-                "numberPorts": 4
+                "number_ports": 4
             },
             "port": [
                 5,
@@ -808,25 +808,25 @@
         },
         {
             "id": 26,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S12",
                 "id": 12,
                 "center": [
                     639,
                     519
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S13",
                 "id": 13,
                 "center": [
                     1242,
                     519
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
             "port": [
                 2,
@@ -839,25 +839,25 @@
         },
         {
             "id": 27,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S12",
                 "id": 12,
                 "center": [
                     639,
                     519
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S10",
                 "id": 10,
                 "center": [
                     1106,
                     359
                 ],
-                "numberPorts": 4
+                "number_ports": 4
             },
             "port": [
                 3,
@@ -870,25 +870,25 @@
         },
         {
             "id": 28,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S13",
                 "id": 13,
                 "center": [
                     1242,
                     519
                 ],
-                "numberPorts": 3
+                "number_ports": 3
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S8",
                 "id": 8,
                 "center": [
                     785,
                     680
                 ],
-                "numberPorts": 4
+                "number_ports": 4
             },
             "port": [
                 3,
@@ -901,29 +901,29 @@
         },
         {
             "id": 31,
-            "startNode": {
-                "nameClass": "Host",
+            "start_node": {
+                "name_class": "Host",
                 "name": "H1",
                 "id": 1,
                 "ip": "10.0.0.1",
                 "mac": "00:00:00:00:00:01",
-                "numberPorts": 1,
+                "number_ports": 1,
                 "center": [
                     314,
                     808
                 ],
-                "server": 1,
+                "is_server": 1,
                 "command": ""
             },
-            "endNode": {
-                "nameClass": "Switch",
+            "end_node": {
+                "name_class": "Switch",
                 "name": "S1",
                 "id": 1,
                 "center": [
                     314,
                     519
                 ],
-                "numberPorts": 6
+                "number_ports": 6
             },
             "port": [
                 1,
@@ -936,28 +936,28 @@
         },
         {
             "id": 32,
-            "startNode": {
-                "nameClass": "Switch",
+            "start_node": {
+                "name_class": "Switch",
                 "name": "S14",
                 "id": 14,
                 "center": [
                     1570,
                     519
                 ],
-                "numberPorts": 6
+                "number_ports": 6
             },
-            "endNode": {
-                "nameClass": "Host",
+            "end_node": {
+                "name_class": "Host",
                 "name": "H2",
                 "id": 2,
                 "ip": "10.0.0.2",
                 "mac": "00:00:00:00:00:02",
-                "numberPorts": 1,
+                "number_ports": 1,
                 "center": [
                     1570,
                     808
                 ],
-                "server": 1,
+                "is_server": 1,
                 "command": ""
             },
             "port": [

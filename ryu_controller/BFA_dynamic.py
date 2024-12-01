@@ -47,10 +47,10 @@ class BFA:
             self.population = [self.create_solution() for i in range(self.N)]
             self.best = []
             for path in self.paths_yen:
-                newSolution = Solution()
-                newSolution.path = np.array(path, dtype=int)
-                newSolution.fitness = self.evaluate(path)
-                self.best.append(newSolution)
+                new_solution = Solution()
+                new_solution.path = np.array(path, dtype=int)
+                new_solution.fitness = self.evaluate(path)
+                self.best.append(new_solution)
             self.best.sort(key=lambda x: x.fitness)
             self.make_change_best()
     
@@ -70,22 +70,22 @@ class BFA:
         self.make_change_best()
 
     def create_solution(self):
-        newSolution = Solution()
+        new_solution = Solution()
         code = np.random.uniform(-1, 1, self.switches.size)
         path = self.decode(code)
-        newSolution.code = code
-        newSolution.path = path
-        newSolution.fitness = self.evaluate(path)
+        new_solution.code = code
+        new_solution.path = path
+        new_solution.fitness = self.evaluate(path)
 
-        newSolution.velocity = np.random.uniform(-0.5, 0.5, len(self.switches))
-        newSolution.best_local_code = code.copy()
-        newSolution.best_local_fitness = newSolution.fitness
+        new_solution.velocity = np.random.uniform(-0.5, 0.5, len(self.switches))
+        new_solution.best_local_code = code.copy()
+        new_solution.best_local_fitness = new_solution.fitness
 
-        if newSolution.best_local_fitness <= self.best_global_solution.fitness:
-            self.best_global_solution.code = newSolution.best_local_code.copy()
-            self.best_global_solution.fitness = newSolution.best_local_fitness
+        if new_solution.best_local_fitness <= self.best_global_solution.fitness:
+            self.best_global_solution.code = new_solution.best_local_code.copy()
+            self.best_global_solution.fitness = new_solution.best_local_fitness
 
-        return newSolution
+        return new_solution
     
     def decode(self, code):
         path = [self.src]

@@ -1,4 +1,4 @@
-from YenAlgorithm import YenAlgorithm
+from Yen_algorithm import YenAlgorithm
 
 class YenAlgorithm_dynamic:
     def __init__(self, port_monitor, paths_dict, key, K):

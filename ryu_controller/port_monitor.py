@@ -30,29 +30,29 @@ class PortMonitor(app_manager.RyuApp):
         self.stats_reply_event = hub.Event()  # Событие ожидания статистики
         self.outstanding_requests = 0  # Количество ожидающих запросов
         self.lbi_history = []  # История индексов балансировки нагрузки
-        self.monitor_thread = hub.spawn(self._monitor)  # Запуск мониторинга в отдельном потоке
+        self.monitor_thread = hub.spawn(self.monitor)  # Запуск мониторинга в отдельном потоке
 
     # Основной цикл мониторинга сети, сбор данных и расчет LBI
-    def _monitor(self):
+    def monitor(self):
         while True:
             try:
-                if self._wait_for_topology_monitor_ready():  # Ожидание готовности мониторинга топологии
-                    self.collect_stats()  # Сбор статистики
-                    self.update_link_metrics()  # Обновление метрик каналов
+                if self.wait_for_topology_monitor_ready():
+                    self.collect_stats()
+                    self.update_link_metrics()
 
-                    lbi = self.get_load_balancing_index()  # Получение индекса балансировки нагрузки
+                    lbi = self.get_load_balancing_index()
                     if lbi is not None and len(self.lbi_history) < LENGTH_LBI:
-                        self.lbi_history.append(lbi)  # Сохранение LBI в истории
+                        self.lbi_history.append(lbi)
                     if len(self.lbi_history) == LENGTH_LBI:
-                        self.save_lbi_history_to_json("result/DAMLB_10.json")  # Сохранение истории в JSON
+                        self.save_lbi_history_to_json("result/DAMLB_10.json")
 
-                hub.sleep(PORT_PERIOD)  # Пауза между циклами мониторинга
+                hub.sleep(PORT_PERIOD)
             except Exception as e:
-                self.logger.error("Error in monitoring loop: %s", str(e))  # Логирование ошибок
+                self.logger.error("Error in monitoring loop: %s", str(e))
                 continue
     
     # Проверка готовности монитора топологии
-    def _wait_for_topology_monitor_ready(self):
+    def wait_for_topology_monitor_ready(self):
         if self.topology_monitor is None:
             return False
 
@@ -64,9 +64,8 @@ class PortMonitor(app_manager.RyuApp):
 
         return True
 
-    # Сбор статистики портов и отправка запросов к коммутаторам
+    # Сбор статистики портов
     def collect_stats(self):
-        # Сбор статистики портов
         self.stats_reply_event.clear()
         self.throughputs = {}
         self.remaining_bandwidths = {}
@@ -74,30 +73,30 @@ class PortMonitor(app_manager.RyuApp):
 
         for datapath in self.topology_monitor.datapaths.values():
             self.port_features.setdefault(datapath.id, {})
-            self._request_stats(datapath)  # Запрос статистики
+            self.request_stats(datapath)
         
         if not self.stats_reply_event.wait(timeout=time_out):
             self.logger.warning("Stats reply timed out.")
             return
 
     # Отправка запроса статистики к коммутатору
-    def _request_stats(self, datapath):
+    def request_stats(self, datapath):
         self.logger.debug('send stats request: %016x', datapath.id)
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
-        req = parser.OFPPortDescStatsRequest(datapath, 0)  # Запрос характеристик портов
+        req = parser.OFPPortDescStatsRequest(datapath, 0)
         datapath.send_msg(req)
 
-        req = parser.OFPPortStatsRequest(datapath, 0, ofproto.OFPP_ANY)  # Запрос статистики портов
+        req = parser.OFPPortStatsRequest(datapath, 0, ofproto.OFPP_ANY)
         datapath.send_msg(req)
 
-        self.outstanding_requests += 2  # Увеличение счетчика ожидающих запросов
+        self.outstanding_requests += 2
 
 
     # Обработка ответа на запрос статистики портов
     @set_ev_cls(ofp_event.EventOFPPortStatsReply, MAIN_DISPATCHER)
-    def _port_stats_reply_handler(self, ev):
+    def port_stats_reply_handler(self, ev):
         body = ev.msg.body
         dpid = ev.msg.datapath.id
         self.throughputs.setdefault(dpid, {})
@@ -108,12 +107,12 @@ class PortMonitor(app_manager.RyuApp):
                 key = (dpid, port_no)
                 value = (stat.tx_bytes, stat.rx_bytes, stat.rx_errors,
                          stat.duration_sec, stat.duration_nsec)
-                self.store_stats(self.port_stats, key, value, 5)  # Сохранение данных статистики порта
-                self.calculate_port_speed(key)  # Расчет скорости порта
+                self.store_stats(self.port_stats, key, value, 5)
+                self.calculate_port_speed(key)
 
-        self.outstanding_requests -= 1  # Уменьшение счетчика ожидающих запросов
+        self.outstanding_requests -= 1
         if self.outstanding_requests == 0:
-            self.stats_reply_event.set()  # Установка события завершения ожидания
+            self.stats_reply_event.set()
 
     # Обработка ответа на запрос характеристик портов
     @set_ev_cls(ofp_event.EventOFPPortDescStatsReply, MAIN_DISPATCHER)
@@ -125,12 +124,12 @@ class PortMonitor(app_manager.RyuApp):
             for dst in self.topology_monitor.graph[dpid]:
                 if self.topology_monitor.graph[dpid][dst]['src_port'] == p.port_no:
                     self.port_features[dpid].setdefault(dst, {})
-                    self.port_features[dpid][dst] = p.curr_speed / 1000  # Конвертация скорости в Мбит/с
+                    self.port_features[dpid][dst] = p.curr_speed / 1000
                     break
 
-        self.outstanding_requests -= 1  # Уменьшение счетчика запросов
+        self.outstanding_requests -= 1 
         if self.outstanding_requests == 0:
-            self.stats_reply_event.set()  # Установка события завершения ожидания
+            self.stats_reply_event.set()
 
     # Расчет скорости порта на основе собранной статистики
     def calculate_port_speed(self, key):
@@ -139,13 +138,13 @@ class PortMonitor(app_manager.RyuApp):
         port_stat_history = self.port_stats.get(key, [])
         if len(port_stat_history) > 1:
             pre = port_stat_history[-2][0]
-            period = self._calculate_period(
+            period = self.calculate_period(
                 port_stat_history[-1][3], port_stat_history[-1][4],
                 port_stat_history[-2][3], port_stat_history[-2][4]
             )
 
         now = port_stat_history[-1][0] if port_stat_history else 0
-        speed = round(self._calculate_speed(now, pre, period), 1)
+        speed = round(self.calculate_speed(now, pre, period), 1)
         src = key[0]
 
         for dst in self.topology_monitor.graph[src]:
@@ -156,7 +155,7 @@ class PortMonitor(app_manager.RyuApp):
 
     # Обновление метрик каналов и расчет стоимости каналов
     def update_link_metrics(self):
-        capacity = MAX_CAPACITY  # Максимальная пропускная способность
+        capacity = MAX_CAPACITY
         new_link_costs = {}
 
         for src in self.topology_monitor.graph:
@@ -169,39 +168,36 @@ class PortMonitor(app_manager.RyuApp):
                     self.link_utilizations[src].setdefault(dst, {})
                     new_link_costs[src].setdefault(dst, {})
 
-                    speed = self.throughputs.get(src, {}).get(dst, 0)  # Пропускная способность между src и dst
-                    free_bandwidth = self.calculate_free_bandwidth(capacity, speed)  # Расчет оставшейся пропускной способности
+                    speed = self.throughputs.get(src, {}).get(dst, 0) 
+                    free_bandwidth = self.calculate_free_bandwidth(capacity, speed)
                     self.remaining_bandwidths[src][dst] = free_bandwidth
-                    link_utilization = round(speed / capacity, 1)  # Коэффициент загруженности канала
+                    link_utilization = round(speed / capacity, 1)
 
                     if self.topology_monitor.graph[src][dst]['status'] == 'down':
-                        link_utilization = None  # Если канал не работает
+                        link_utilization = None
 
                     self.link_utilizations[src][dst] = link_utilization
 
                     if link_utilization == None:
-                        new_link_costs[src][dst] = Decimal('1000')  # Высокая стоимость для неработающих каналов
+                        new_link_costs[src][dst] = Decimal('1000')
                     elif link_utilization == 1:
-                        new_link_costs[src][dst] = Decimal('100')  # Стоимость для загруженных на 100%
+                        new_link_costs[src][dst] = Decimal('100')
                     else:
-                        new_link_costs[src][dst] = Decimal(str(round(1 / (1 - link_utilization), 1)))  # Стоимость для частично загруженных каналов
+                        new_link_costs[src][dst] = Decimal(str(round(1 / (1 - link_utilization), 1)))
 
         if new_link_costs:
-            self.link_costs.clear()  # Очистка старых данных о стоимости
-            self.link_costs.update(new_link_costs)  # Обновление новой стоимости
+            self.link_costs.clear()
+            self.link_costs.update(new_link_costs)
 
     # Расчет индекса балансировки нагрузки на основе коэффициентов загруженности канала
     def calculate_load_balancing_index(self, utilizations):
         if not utilizations or len(utilizations) == 0:
             return None
-
         n = len(utilizations)
         sum_utilization = sum(utilizations)
         sum_square_utilization = sum([pow(u, 2) for u in utilizations])
-
         if sum_square_utilization == 0:
             return 1
-
         lbi = pow(sum_utilization, 2) / (n * sum_square_utilization)
         return lbi
 
@@ -222,7 +218,6 @@ class PortMonitor(app_manager.RyuApp):
 
     # Хранение статистики портов в истории
     def store_stats(self, stats_dict, key, value, length):
-        
         if key not in stats_dict:
             stats_dict[key] = []
         stats_dict[key].append(value)
@@ -234,15 +229,15 @@ class PortMonitor(app_manager.RyuApp):
         return max(capacity - speed, 0)
 
     # Расчет периода времени между двумя запросами статистики
-    def _calculate_period(self, n_sec, n_nsec, p_sec, p_nsec):
-        return self._get_time(n_sec, n_nsec) - self._get_time(p_sec, p_nsec)
+    def calculate_period(self, n_sec, n_nsec, p_sec, p_nsec):
+        return self.get_time(n_sec, n_nsec) - self.get_time(p_sec, p_nsec)
 
     # Преобразование времени в секундах и наносекундах в секунды
-    def _get_time(self, sec, nsec):
+    def get_time(self, sec, nsec):
         return sec + nsec / (10 ** 9)
 
     # Расчет скорости передачи данных
-    def _calculate_speed(self, now, pre, period):
+    def calculate_speed(self, now, pre, period):
         if period:
             return 8 * (now - pre) / (period * 10 ** 6)
         else:

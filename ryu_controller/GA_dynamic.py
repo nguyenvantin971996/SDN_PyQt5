@@ -46,10 +46,10 @@ class GA:
             self.population = [self.create_solution() for _ in range(self.N)]  # Создание популяции
             self.best = []  # Инициализация лучших решений
             for path in self.paths_yen:
-                newSolution = Solution()  # Создание нового решения для каждого пути из Йена
-                newSolution.path = np.array(path, dtype=int)  # Преобразование пути в массив
-                newSolution.fitness = self.evaluate(path)  # Оценка приспособленности
-                self.best.append(newSolution)  # Добавление решения в список лучших
+                new_solution = Solution()  # Создание нового решения для каждого пути из Йена
+                new_solution.path = np.array(path, dtype=int)  # Преобразование пути в массив
+                new_solution.fitness = self.evaluate(path)  # Оценка приспособленности
+                self.best.append(new_solution)  # Добавление решения в список лучших
             self.best.sort(key=lambda x: x.fitness)  # Сортировка лучших решений по приспособленности
             self.make_change_best()  # Обновление лучших решений в словаре путей
     

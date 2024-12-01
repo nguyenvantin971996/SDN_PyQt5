@@ -7,7 +7,6 @@ from ryu.lib import hub
 from ryu.app.wsgi import WSGIApplication, ControllerBase, Response, route
 
 import json
-from time import time
 from decimal import Decimal
 import copy
 from setting import REROUTING_PERIOD, K, MAX_CAPACITY, MAX_VALUE
@@ -17,7 +16,7 @@ from port_monitor import PortMonitor
 from topology_monitor import TopologyMonitor
 from flow_monitor import FlowMonitor
 
-from YenAlgorithm import YenAlgorithm
+from Yen_algorithm import YenAlgorithm
 from ABC_static import ABC
 from BFA_static import BFA
 from FA_static import FA
@@ -25,7 +24,7 @@ from AS_static import AS
 from ACS_static import ACS
 from GA_static import GA
 
-class MultiPathRouting(app_manager.RyuApp):
+class MultiPathLoadBalancing(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
     _CONTEXTS = {
@@ -38,8 +37,8 @@ class MultiPathRouting(app_manager.RyuApp):
 
     def __init__(self, *_args, **_kwargs):
 
-        super(MultiPathRouting, self).__init__(*_args, **_kwargs)
-        self.name = 'multipath_routing'
+        super(MultiPathLoadBalancing, self).__init__(*_args, **_kwargs)
+        self.name = 'multipath_load_balancing'
         
         wsgi: WSGIApplication = _kwargs['wsgi']
         wsgi.register(NetworkStatRest, {'rest_api_app': self})
@@ -62,7 +61,7 @@ class MultiPathRouting(app_manager.RyuApp):
 
     # Обработка события при подключении нового коммутатора
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
-    def _switch_features_handler(self, ev):
+    def switch_features_handler(self, ev):
         self.switch_count = self.switch_count +1
         print ("switch_features_handler "+str(self.switch_count) + " is called")
         datapath = ev.msg.datapath
@@ -75,7 +74,7 @@ class MultiPathRouting(app_manager.RyuApp):
 
     # Обработка события прихода пакета на контроллер
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
-    def _packet_in_handler(self, ev):
+    def packet_in_handler(self, ev):
         msg = ev.msg
         datapath = msg.datapath
         parser = datapath.ofproto_parser
@@ -103,21 +102,19 @@ class MultiPathRouting(app_manager.RyuApp):
         if mac_src not in self.hosts_map:
             self.hosts_map[mac_src] = (dpid, in_port)
 
-        # Обработка ARP
         if arp_pkt:
             self.handle_arp(datapath, in_port, pkt, arp_pkt, msg)
             return
         
-        # Обработка ICMP
         if icmp_pkt:
             self.handle_icmp(datapath, in_port, pkt, ip_pkt, icmp_pkt, msg)
             return
 
-        # Обработка TCP и UDP
         if tcp_pkt or udp_pkt:
             self.handle_tcp_udp(datapath, in_port, pkt, ip_pkt, tcp_pkt, udp_pkt, msg)
             return
-    
+
+    # Обработка ARP
     def handle_arp(self, datapath, in_port, pkt, arp_pkt, msg):
         parser = datapath.ofproto_parser
         ofproto = datapath.ofproto
@@ -126,13 +123,10 @@ class MultiPathRouting(app_manager.RyuApp):
         dst_ip = arp_pkt.dst_ip
         mac_src = eth.src
         mac_dst = eth.dst
-
-        self.ip_to_mac_map[src_ip] = mac_src  # Обновляем карту IP-MAC
-
+        self.ip_to_mac_map[src_ip] = mac_src
         if arp_pkt.opcode == arp.ARP_REQUEST:
             if dst_ip in self.ip_to_mac_map:
                 dst_mac = self.ip_to_mac_map[dst_ip]
-                # Формируем ARP Reply
                 arp_reply = packet.Packet()
                 arp_reply.add_protocol(
                     ethernet.ethernet(
@@ -176,6 +170,7 @@ class MultiPathRouting(app_manager.RyuApp):
                 )
                 datapath.send_msg(out)
 
+    # Обработка ICMP
     def handle_icmp(self, datapath, in_port, pkt, ip_pkt, icmp_pkt, msg):
         parser = datapath.ofproto_parser
         ofproto = datapath.ofproto
@@ -227,6 +222,7 @@ class MultiPathRouting(app_manager.RyuApp):
                 )
                 datapath.send_msg(out)
 
+    # Обработка TCP и UDP
     def handle_tcp_udp(self, datapath, in_port, pkt, ip_pkt, tcp_pkt, udp_pkt, msg):
         parser = datapath.ofproto_parser
         ofproto = datapath.ofproto
@@ -352,7 +348,7 @@ class MultiPathRouting(app_manager.RyuApp):
     def adaptive_routing(self):
         while True:
             metric = copy.deepcopy(self.port_monitor.get_link_costs())
-            self.rerouting(metric)# Переназначение маршрутов
+            self.rerouting(metric)
             hub.sleep(REROUTING_PERIOD)
 
     # Функция переназначения маршрутов при перегрузке
@@ -365,7 +361,6 @@ class MultiPathRouting(app_manager.RyuApp):
             new_WRR = {}
             for key, path_info in tmp_paths_dict.items():
                 old_paths, old_paths_edges, old_pw, src_ip, dst_ip, src_dst, streams = copy.deepcopy(path_info)
-
                 streams_overloaded = []
                 for path_index, tcp_pkt, udp_pkt in streams:
                     flow = None
@@ -418,7 +413,6 @@ class MultiPathRouting(app_manager.RyuApp):
                     self.paths_cache[key][1].extend(new_paths_edges)
                     self.paths_cache[key][2].extend(new_pw)
                     self.paths_cache[key][-1] = streams
-            print(overloaded_links, flows_overloaded)
 
     # Получение списка перегруженных каналов (где стоимость канала > 10)
     def get_overloaded_links(self, metric):
@@ -430,7 +424,7 @@ class MultiPathRouting(app_manager.RyuApp):
                     overloaded_links.append((src, dst))
         return overloaded_links
     
-    # Получение потоков, проходящих через перегруженные каналы
+    # # Поиск минимального множества потоков, удаление которых решает проблему перегрузки на всех перегруженных каналах
     def get_flows_overloaded(self, overloaded_links):
         capacity = MAX_CAPACITY
         flow_speeds = {}
@@ -522,6 +516,7 @@ class MultiPathRouting(app_manager.RyuApp):
         weights_after_normalizing[-1] = round(weights_after_normalizing[-1], 2)
         return weights_after_normalizing
     
+    # Метод взвешенного циклического распределения
     def weighted_periodic_distribution(self, weights_rr, n_index):
         weights = copy.deepcopy(weights_rr)
         if not weights or n_index <= 0:
@@ -549,7 +544,7 @@ class NetworkStatRest(ControllerBase):
 
     def __init__(self, req, link, data, **config):
         super(NetworkStatRest, self).__init__(req, link, data, **config)
-        self.app: MultiPathRouting = data['rest_api_app']
+        self.app: MultiPathLoadBalancing = data['rest_api_app']
 
     @route('rest_api_app', '/', methods=['GET'])
     def hello(self, req, **_kwargs):

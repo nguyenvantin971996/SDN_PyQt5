@@ -6,7 +6,6 @@ from ryu.topology import event
 from ryu.controller import ofp_event
 from ryu.topology.api import get_link, get_switch
 import networkx as nx
-import logging
 
 # Класс приложения для мониторинга топологии сети
 class TopologyMonitor(app_manager.RyuApp):
@@ -20,13 +19,13 @@ class TopologyMonitor(app_manager.RyuApp):
         self.graph = nx.DiGraph()  # Граф для хранения топологии сети
 
     # Обновление топологии сети с использованием API Ryu
-    def _update_topology(self):
+    def update_topology(self):
         switch_list = get_switch(self, None)
         links = get_link(self, None)
-        self._update_graph(switch_list, links)
+        self.update_graph(switch_list, links)
 
     # Обновление графа сети с учетом состояния каналов и коммутаторов
-    def _update_graph(self, switch_list, links):
+    def update_graph(self, switch_list, links):
         new_graph = nx.DiGraph(self.graph)
 
         # Добавление всех коммутаторов в граф
@@ -52,12 +51,12 @@ class TopologyMonitor(app_manager.RyuApp):
 
     # Обработка событий изменения топологии (добавление/удаление коммутаторов и каналов)
     @set_ev_cls([event.EventSwitchEnter, event.EventSwitchLeave, event.EventLinkAdd, event.EventLinkDelete])
-    def _get_topology(self, ev):
-        self._update_topology()
+    def topology_change_handler(self, ev):
+        self.update_topology()
 
     # Обработка событий изменения состояния коммутаторов
     @set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
-    def _state_change_handler(self, ev):
+    def state_change_handler(self, ev):
         datapath = ev.datapath
         if ev.state == MAIN_DISPATCHER:
             self.datapaths[datapath.id] = datapath  # Добавление коммутатора в список datapath
@@ -66,7 +65,7 @@ class TopologyMonitor(app_manager.RyuApp):
 
     # Обработчик событий изменения состояния портов (доступность/недоступность портов)
     @set_ev_cls(ofp_event.EventOFPPortStatus, MAIN_DISPATCHER)
-    def _port_status_handler(self, ev):
+    def port_status_handler(self, ev):
         msg = ev.msg
         reason = msg.reason
         port_no = msg.desc.port_no

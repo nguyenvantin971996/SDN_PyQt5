@@ -50,24 +50,24 @@ class BFA:
 
     def create_solution(self):
         # Создание нового решения
-        newSolution = Solution()
+        new_solution = Solution()
         code = np.random.uniform(-1, 1, self.switches.size)  # Генерация случайного кода
         path = self.decode(code)  # Декодирование пути из кода
-        newSolution.code = code
-        newSolution.path = path
-        newSolution.fitness = self.evaluate(path)  # Оценка приспособленности
+        new_solution.code = code
+        new_solution.path = path
+        new_solution.fitness = self.evaluate(path)  # Оценка приспособленности
 
         # Инициализация скорости и локальных лучших решений
-        newSolution.velocity = np.random.uniform(-0.5, 0.5, len(self.switches))
-        newSolution.best_local_code = code.copy()
-        newSolution.best_local_fitness = newSolution.fitness
+        new_solution.velocity = np.random.uniform(-0.5, 0.5, len(self.switches))
+        new_solution.best_local_code = code.copy()
+        new_solution.best_local_fitness = new_solution.fitness
 
         # Обновление глобального лучшего решения
-        if newSolution.best_local_fitness <= self.best_global_solution.fitness:
-            self.best_global_solution.code = newSolution.best_local_code.copy()
-            self.best_global_solution.fitness = newSolution.best_local_fitness
+        if new_solution.best_local_fitness <= self.best_global_solution.fitness:
+            self.best_global_solution.code = new_solution.best_local_code.copy()
+            self.best_global_solution.fitness = new_solution.best_local_fitness
 
-        return newSolution
+        return new_solution
     
     def decode(self, code):
         # Декодирование кода в путь
