@@ -10,6 +10,7 @@ import json
 from decimal import Decimal
 import copy
 from setting import REROUTING_PERIOD, K, MAX_CAPACITY, MAX_VALUE
+from tensorflow.keras.models import load_model
 
 from delay_monitor import DelayMonitor
 from port_monitor import PortMonitor
@@ -23,6 +24,8 @@ from FA import FA
 from AS import AS
 from ACS import ACS
 from GA import GA
+from RNN import RNNShortestPaths
+
 
 class MultiPathLoadBalancing(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -55,6 +58,8 @@ class MultiPathLoadBalancing(app_manager.RyuApp):
         self.paths_cache = {}
         self.switch_count = 0
         self.WRR = {}
+
+        self.model = load_model('model_6.h5', compile=False)
 
         # Запуск фоновой задачи для маршрутизации
         # self.adaptive_routing_thread = hub.spawn(self.adaptive_routing)
@@ -384,6 +389,7 @@ class MultiPathLoadBalancing(app_manager.RyuApp):
                     # alg = BFA(new_metric, src, dst, K, 10, 100, 0.7, 2, 2)
                     # alg = FA(new_metric, src, dst, K, 10, 100, 1, 1, 1)
                     # alg = GA(new_metric, src, dst, K, 10, 100, 0.7, 0.7, 2)
+                    # alg = RNNShortestPaths(self.model, new_metric, src, dst, K)
                     new_paths, new_paths_edges, new_pw = alg.compute_shortest_paths()
                     
                     normalized_pw = self.normalize(new_pw)
