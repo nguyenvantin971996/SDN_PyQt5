@@ -14,7 +14,7 @@ from port_monitor import PortMonitor
 from topology_monitor import TopologyMonitor
 from flow_monitor import FlowMonitor
 
-from Yen_algorithm import YenAlgorithm
+from Yen import Yen
 
 class MultiPathLoadBalancing(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -336,7 +336,7 @@ class MultiPathLoadBalancing(app_manager.RyuApp):
         for u in metric:
             for v in metric[u]:
                 metric[u][v] = 1
-        alg = YenAlgorithm(metric, src, dst, K, same_cost=True)
+        alg = Yen(metric, src, dst, K, same_cost=True)
         paths_nodes, paths_edges, paths_weights = alg.compute_shortest_paths()
         return paths_nodes, paths_edges, paths_weights
     

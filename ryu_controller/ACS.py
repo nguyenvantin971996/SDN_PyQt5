@@ -129,7 +129,7 @@ class ACS:
                 total_weight += weight
             return total_weight
     
-    def global_pheromone_update(self):
+    def global_update_pheromone(self):
         # Глобальное обновление уровня феромона по наилучшему решению
         self.colony.sort(key=lambda ant: ant.fitness)  # Сортировка муравьев по приспособленности
         best_ant = self.colony[0]  # Наилучший муравей
@@ -182,7 +182,7 @@ class ACS:
         # Основной цикл выполнения алгоритма системы муравьиной колонии
         for iteration in range(self.Max):
             self.create_path()  # Создание путей для всех муравьев
-            self.global_pheromone_update()  # Глобальное обновление феромонов
+            self.global_update_pheromone()  # Глобальное обновление феромонов
             self.compare_best()  # Сравнение и выбор лучших путей
 
             # Обновление значений для отображения графиков

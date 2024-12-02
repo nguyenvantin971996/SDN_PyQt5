@@ -16,13 +16,13 @@ from port_monitor import PortMonitor
 from topology_monitor import TopologyMonitor
 from flow_monitor import FlowMonitor
 
-from Yen_algorithm import YenAlgorithm
-from ABC_static import ABC
-from BFA_static import BFA
-from FA_static import FA
-from AS_static import AS
-from ACS_static import ACS
-from GA_static import GA
+from Yen import Yen
+from ABC import ABC
+from BFA import BFA
+from FA import FA
+from AS import AS
+from ACS import ACS
+from GA import GA
 
 class MultiPathLoadBalancing(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -377,7 +377,7 @@ class MultiPathLoadBalancing(app_manager.RyuApp):
                     dst = key[2]
                     out_port_dst_sw = key[3]
 
-                    alg = YenAlgorithm(new_metric, src, dst, K)
+                    alg = Yen(new_metric, src, dst, K)
                     # alg = ABC(new_metric, src, dst, K, 10, 100, 20)
                     # alg = ACS(new_metric, src, dst, K, 10, 100, 0.1, 1, 2, 0.5, 1)
                     # alg = AS(new_metric, src, dst, K, 10, 100, 0.1, 1, 2, 1)
@@ -536,7 +536,7 @@ class MultiPathLoadBalancing(app_manager.RyuApp):
     # Получение оптимальных путей для пакетов
     def calculate_best_paths(self, src, dst):
         metric = copy.deepcopy(self.port_monitor.get_link_costs())
-        alg = YenAlgorithm(metric, src, dst, K)
+        alg = Yen(metric, src, dst, K)
         paths_nodes, paths_edges, paths_weights = alg.compute_shortest_paths()
         return paths_nodes, paths_edges, paths_weights
     

@@ -1,4 +1,4 @@
-from Dijkstra_algorithm import DijkstraAlgorithm
+from Dijkstra import Dijkstra
 import copy
 
 class Solution:
@@ -6,7 +6,7 @@ class Solution:
         self.path = []
         self.length = 0
 
-class YenAlgorithm:
+class Yen:
     def __init__(self, weight_map, src, dst, K, same_cost=False):
         self.weight_map = weight_map
         self.src = src
@@ -16,7 +16,7 @@ class YenAlgorithm:
 
     def compute_shortest_paths(self):
         paths = []
-        alg = DijkstraAlgorithm(self.weight_map)
+        alg = Dijkstra(self.weight_map)
         first_path = Solution()
         first_path.path = alg.compute_shortest_path(self.src, self.dst)
         first_path.length = self.compute_path_length(first_path.path)
@@ -50,7 +50,7 @@ class YenAlgorithm:
                     #     if connected_node in weight:
                     #         del weight[connected_node][node]
 
-                alg_d = DijkstraAlgorithm(weight)
+                alg_d = Dijkstra(weight)
                 spurPath = alg_d.compute_shortest_path(spurNode, self.dst)
 
                 if spurPath:

@@ -1,10 +1,10 @@
 MAX_VALUE = 10**10
 
-class DijkstraAlgorithm:
+class Dijkstra:
 
     def __init__(self, weight_map):
-        self.switches = list(weight_map.keys())
         self.weight_map = weight_map
+        self.switches = list(weight_map.keys())
         self.distance = {}
         self.previous = {}
 

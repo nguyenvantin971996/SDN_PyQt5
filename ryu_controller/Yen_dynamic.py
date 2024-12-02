@@ -1,6 +1,6 @@
-from Yen_algorithm import YenAlgorithm
+from Yen import Yen
 
-class YenAlgorithm_dynamic:
+class Yen_dynamic:
     def __init__(self, port_monitor, paths_dict, key, K):
         self.port_monitor = port_monitor
         self.paths_dict = paths_dict
@@ -13,7 +13,7 @@ class YenAlgorithm_dynamic:
         self.K = K
 
     def compute_shortest_paths(self, time_limit):
-        alg = YenAlgorithm(self.weight_map, self.src, self.dst, self.K)
+        alg = Yen(self.weight_map, self.src, self.dst, self.K)
         paths, paths_edges, pw = alg.compute_shortest_paths()
         self.paths_dict[self.key][0] = paths
         self.paths_dict[self.key][1] = paths_edges
