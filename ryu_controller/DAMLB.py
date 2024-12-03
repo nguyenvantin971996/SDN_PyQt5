@@ -59,7 +59,7 @@ class MultiPathLoadBalancing(app_manager.RyuApp):
         self.switch_count = 0
         self.WRR = {}
 
-        self.model = load_model('model_6.h5', compile=False)
+        self.model = load_model('model.h5', compile=False)
 
         # Запуск фоновой задачи для маршрутизации
         self.adaptive_routing_thread = hub.spawn(self.adaptive_routing)
