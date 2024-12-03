@@ -3,7 +3,7 @@ from sklearn.preprocessing import StandardScaler
 
 edges = [[1, 2], [1, 5], [1, 8], [2, 3], [3, 4], [3, 8], [3, 9], [4, 10], [5, 6], [6, 7], [6, 8], [6, 9], [7, 10], [9, 10]]
 
-class RNNShortestPaths:
+class RNN:
     def __init__(self, model,  weight_map, src=1, dst=10, K=4):
         self.model = model
         self.weight_map = weight_map

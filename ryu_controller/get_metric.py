@@ -8,7 +8,7 @@ def getMetric(fileName, metric='cost'):
     for item in topoData['switches']:
         wMap[item['id']] = {}
     for link in topoData['links']:
-        if "Host" not in [link['startNode']['nameClass'], link['endNode']['nameClass']]:
-            wMap[link['startNode']['id']][link['endNode']['id']] = link[metric]
-            wMap[link['endNode']['id']][link['startNode']['id']] = link[metric]
+        if "Host" not in [link['start_node']['name_class'], link['end_node']['name_class']]:
+            wMap[link['start_node']['id']][link['end_node']['id']] = link[metric]
+            wMap[link['end_node']['id']][link['start_node']['id']] = link[metric]
     return wMap

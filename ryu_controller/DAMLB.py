@@ -24,7 +24,7 @@ from FA import FA
 from AS import AS
 from ACS import ACS
 from GA import GA
-from RNN import RNNShortestPaths
+from RNN import RNN
 
 
 class MultiPathLoadBalancing(app_manager.RyuApp):
@@ -62,7 +62,7 @@ class MultiPathLoadBalancing(app_manager.RyuApp):
         self.model = load_model('model_6.h5', compile=False)
 
         # Запуск фоновой задачи для маршрутизации
-        # self.adaptive_routing_thread = hub.spawn(self.adaptive_routing)
+        self.adaptive_routing_thread = hub.spawn(self.adaptive_routing)
 
     # Обработка события при подключении нового коммутатора
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
@@ -389,7 +389,7 @@ class MultiPathLoadBalancing(app_manager.RyuApp):
                     # alg = BFA(new_metric, src, dst, K, 10, 100, 0.7, 2, 2)
                     # alg = FA(new_metric, src, dst, K, 10, 100, 1, 1, 1)
                     # alg = GA(new_metric, src, dst, K, 10, 100, 0.7, 0.7, 2)
-                    # alg = RNNShortestPaths(self.model, new_metric, src, dst, K)
+                    # alg = RNN(self.model, new_metric, src, dst, K)
                     new_paths, new_paths_edges, new_pw = alg.compute_shortest_paths()
                     
                     normalized_pw = self.normalize(new_pw)

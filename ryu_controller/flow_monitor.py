@@ -33,7 +33,7 @@ class FlowMonitor(app_manager.RyuApp):
                 self.logger.error("Error in monitoring loop: %s", str(e))
                 continue
 
-    # Проверка готовности монитора топологии
+    # Проверка готовности мониторинга топологии
     def wait_for_topology_monitor_ready(self):
         
         if self.topology_monitor is None:
