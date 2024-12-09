@@ -10,7 +10,7 @@ import json
 from decimal import Decimal
 import copy
 from setting import REROUTING_PERIOD, K, MAX_CAPACITY, MAX_VALUE
-from tensorflow.keras.models import load_model
+# from tensorflow.keras.models import load_model
 
 from delay_monitor import DelayMonitor
 from port_monitor import PortMonitor
@@ -59,10 +59,10 @@ class MultiPathLoadBalancing(app_manager.RyuApp):
         self.switch_count = 0
         self.WRR = {}
 
-        self.model = load_model('model.h5', compile=False)
+        # self.model = load_model('model.h5', compile=False)
 
-        # Запуск фоновой задачи для маршрутизации
-        self.adaptive_routing_thread = hub.spawn(self.adaptive_routing)
+        # # Запуск фоновой задачи для маршрутизации
+        # self.adaptive_routing_thread = hub.spawn(self.adaptive_routing)
 
     # Обработка события при подключении нового коммутатора
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)

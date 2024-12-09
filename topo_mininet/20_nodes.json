@@ -10,7 +10,7 @@
                 634,
                 115
             ],
-            "script": "/home/tin/SDN_PyQt5/ryu_controller/ryu_dynamic_RR.py"
+            "script": "/home/tin/SDN_PyQt5/ryu_controller/DAMLB.py"
         }
     ],
     "switches": [
@@ -228,7 +228,7 @@
                 843
             ],
             "is_server": 0,
-            "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 60 -i 1 -P 3 -u -b 70M &\nwait"
+            "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 10 -i 1 -P 4 -u -b 10M &\nwait"
         },
         {
             "name_class": "Host",
@@ -242,7 +242,7 @@
                 843
             ],
             "is_server": 1,
-            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/rr.json &\nwait"
+            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 &\nwait"
         }
     ],
     "links": [
@@ -260,7 +260,7 @@
                     843
                 ],
                 "is_server": 0,
-                "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 60 -i 1 -P 3 -u -b 70M &\nwait"
+                "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 10 -i 1 -P 4 -u -b 10M &\nwait"
             },
             "end_node": {
                 "name_class": "Switch",
@@ -677,7 +677,7 @@
                     843
                 ],
                 "is_server": 1,
-                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/rr.json &\nwait"
+                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 &\nwait"
             },
             "port": [
                 4,
