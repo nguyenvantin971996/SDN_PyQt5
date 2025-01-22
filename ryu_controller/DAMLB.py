@@ -18,12 +18,7 @@ from topology_monitor import TopologyMonitor
 from flow_monitor import FlowMonitor
 
 from Yen import Yen
-from ABC import ABC
-from BFA import BFA
-from FA import FA
-from AS import AS
-from ACS import ACS
-from GA import GA
+from SI import SI
 from RNN import RNN
 
 
@@ -382,13 +377,10 @@ class MultiPathLoadBalancing(app_manager.RyuApp):
                     dst = key[2]
                     out_port_dst_sw = key[3]
 
+                    # alg = SI(new_metric, src, dst, K, 10, 100, 'ABC')
+                    # new_paths, new_paths_edges, new_pw = alg.run()
+
                     alg = Yen(new_metric, src, dst, K)
-                    # alg = ABC(new_metric, src, dst, K, 10, 100, 20)
-                    # alg = ACS(new_metric, src, dst, K, 10, 100, 0.1, 1, 2, 0.5, 1)
-                    # alg = AS(new_metric, src, dst, K, 10, 100, 0.1, 1, 2, 1)
-                    # alg = BFA(new_metric, src, dst, K, 10, 100, 0.7, 2, 2)
-                    # alg = FA(new_metric, src, dst, K, 10, 100, 1, 1, 1)
-                    # alg = GA(new_metric, src, dst, K, 10, 100, 0.7, 0.7, 2)
                     # alg = RNN(self.model, new_metric, src, dst, K)
                     new_paths, new_paths_edges, new_pw = alg.compute_shortest_paths()
                     
