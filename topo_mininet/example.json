@@ -10,7 +10,7 @@
                 740,
                 153
             ],
-            "script": null
+            "script": "/home/tin/SDN_PyQt5/ryu_controller/DAMLB.py"
         }
     ],
     "switches": [
@@ -97,8 +97,8 @@
                 461,
                 754
             ],
-            "is_server": 1,
-            "command": ""
+            "is_server": 0,
+            "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 20 -i 1 -u -b 1M -P 1 &\nwait"
         },
         {
             "name_class": "Host",
@@ -112,7 +112,7 @@
                 754
             ],
             "is_server": 1,
-            "command": ""
+            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 &\nwait"
         }
     ],
     "links": [
@@ -129,8 +129,8 @@
                     461,
                     754
                 ],
-                "is_server": 1,
-                "command": ""
+                "is_server": 0,
+                "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 20 -i 1 -u -b 1M -P 1 &\nwait"
             },
             "end_node": {
                 "name_class": "Switch",
@@ -485,7 +485,7 @@
                     754
                 ],
                 "is_server": 1,
-                "command": ""
+                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 &\nwait"
             },
             "port": [
                 3,
