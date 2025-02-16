@@ -257,7 +257,7 @@ class MainWindow(QMainWindow):
 
         action_menu.addAction(self.addStartAction("images/start.png", "Start"))
         action_menu.addAction(self.addStopAction("images/stop.png", "Stop"))
-        action_menu.addAction(self.addMonitorAction("images/table.png", "Dynamic Metrics"))
+        action_menu.addAction(self.addMonitorAction("images/table.png", "Dynamic Metric"))
         action_menu.addAction(self.addPlotAction("images/plot.png", "Plot Result"))
         action_menu.addAction(self.addPathsAction("images/paths.png", "Paths"))
         action_menu.addAction(self.addTerminalAction("images/terminal.png", "Terminal"))
@@ -1510,7 +1510,7 @@ class MainWindow(QMainWindow):
         ryu_name = os.path.basename(ryu_name)
         if checkbox_1.isChecked()==True:
             checkbox_2.setChecked(False)
-            cmd_edit.setPlainText('#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/is_server/{0}_{1}.json &\nwait'.format(self.node_selected.name, ryu_name)) #iperf3
+            cmd_edit.setPlainText('#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/{0}_{1}.json &\nwait'.format(self.node_selected.name, ryu_name)) #iperf3
             # cmd_edit.setPlainText('#!/bin/bash\nITGRecv -l ./result/server_{0}_{1}.log &\nwait'.format(self.node_selected.name, ryu_name)) # D-ITG
         if checkbox_1.isChecked()==False and checkbox_2.isChecked()==False:
             cmd_edit.setPlainText('')

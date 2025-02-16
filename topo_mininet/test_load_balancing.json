@@ -148,7 +148,7 @@
                 520
             ],
             "is_server": 0,
-            "command": ""
+            "command": "#!/bin/bash\nsleep 20\niperf3 -c 10.0.0.2 -p 5000 -t 60 -i 1 -u -b 20M -P 10 &\nwait"
         },
         {
             "name_class": "Host",
@@ -161,8 +161,8 @@
                 1679,
                 520
             ],
-            "is_server": 0,
-            "command": ""
+            "is_server": 1,
+            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2_DAMLB.json &\nwait"
         },
         {
             "name_class": "Host",
@@ -176,7 +176,7 @@
                 113
             ],
             "is_server": 0,
-            "command": ""
+            "command": "#!/bin/bash\niperf3 -c 10.0.0.4 -p 5000 -t 60 -i 1 -u -b 20M -P 10 &\nwait"
         },
         {
             "name_class": "Host",
@@ -189,8 +189,8 @@
                 1131,
                 964
             ],
-            "is_server": 0,
-            "command": ""
+            "is_server": 1,
+            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H4_DAMLB.json &\nwait"
         }
     ],
     "links": [
@@ -828,7 +828,7 @@
                     520
                 ],
                 "is_server": 0,
-                "command": ""
+                "command": "#!/bin/bash\nsleep 20\niperf3 -c 10.0.0.2 -p 5000 -t 60 -i 1 -u -b 20M -P 10 &\nwait"
             },
             "end_node": {
                 "name_class": "Switch",
@@ -872,8 +872,8 @@
                     1679,
                     520
                 ],
-                "is_server": 0,
-                "command": ""
+                "is_server": 1,
+                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2_DAMLB.json &\nwait"
             },
             "port": [
                 5,
@@ -970,7 +970,7 @@
                     113
                 ],
                 "is_server": 0,
-                "command": ""
+                "command": "#!/bin/bash\niperf3 -c 10.0.0.4 -p 5000 -t 60 -i 1 -u -b 20M -P 10 &\nwait"
             },
             "port": [
                 4,
@@ -1004,8 +1004,8 @@
                     1131,
                     964
                 ],
-                "is_server": 0,
-                "command": ""
+                "is_server": 1,
+                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H4_DAMLB.json &\nwait"
             },
             "port": [
                 4,

@@ -61,11 +61,11 @@ def topology():
 	net = Mininet(topo=topo, controller=RemoteController(name='C1', ip='127.0.0.1', port=6653), link=link)
 	net.start()
 	sleep(2)
+	makeTerm(net['H2'],cmd='bash traffic/H2.sh')
+	makeTerm(net['H4'],cmd='bash traffic/H4.sh')
 	sleep(2)
 	makeTerm(net['H1'],cmd='bash traffic/H1.sh')
-	makeTerm(net['H2'],cmd='bash traffic/H2.sh')
 	makeTerm(net['H3'],cmd='bash traffic/H3.sh')
-	makeTerm(net['H4'],cmd='bash traffic/H4.sh')
 	CLI(net)
 	net.stop()
 
