@@ -78,7 +78,7 @@
                 747
             ],
             "is_server": 0,
-            "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 100 -i 1 -u -b 20M -P 10 &\nwait"
+            "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 50 -i 1 -u -b 20M -P 4 &\nwait"
         },
         {
             "name_class": "Host",
@@ -92,7 +92,7 @@
                 738
             ],
             "is_server": 1,
-            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2.json &\nwait"
+            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 &\nwait"
         },
         {
             "name_class": "Host",
@@ -106,7 +106,7 @@
                 180
             ],
             "is_server": 0,
-            "command": "#!/bin/bash\nsleep 20\niperf3 -c 10.0.0.4 -p 5000 -t 100 -i 1 -u -b 20M -P 10 &\nwait"
+            "command": "#!/bin/bash\nsleep 20\niperf3 -c 10.0.0.4 -p 5000 -t 50 -i 1 -u -b 20M -P 4 &\nwait"
         },
         {
             "name_class": "Host",
@@ -120,7 +120,7 @@
                 914
             ],
             "is_server": 1,
-            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H4.json &\nwait"
+            "command": "#!/bin/bash\niperf3 -s -p 5000 -1 &\nwait"
         }
     ],
     "links": [
@@ -138,7 +138,7 @@
                     747
                 ],
                 "is_server": 0,
-                "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 100 -i 1 -u -b 20M -P 10 &\nwait"
+                "command": "#!/bin/bash\niperf3 -c 10.0.0.2 -p 5000 -t 50 -i 1 -u -b 20M -P 4 &\nwait"
             },
             "end_node": {
                 "name_class": "Switch",
@@ -431,7 +431,7 @@
                     180
                 ],
                 "is_server": 0,
-                "command": "#!/bin/bash\nsleep 20\niperf3 -c 10.0.0.4 -p 5000 -t 100 -i 1 -u -b 20M -P 10 &\nwait"
+                "command": "#!/bin/bash\nsleep 20\niperf3 -c 10.0.0.4 -p 5000 -t 50 -i 1 -u -b 20M -P 4 &\nwait"
             },
             "port": [
                 4,
@@ -466,7 +466,7 @@
                     738
                 ],
                 "is_server": 1,
-                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H2.json &\nwait"
+                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 &\nwait"
             },
             "port": [
                 4,
@@ -501,7 +501,7 @@
                     914
                 ],
                 "is_server": 1,
-                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 -J > result/server/H4.json &\nwait"
+                "command": "#!/bin/bash\niperf3 -s -p 5000 -1 &\nwait"
             },
             "port": [
                 4,

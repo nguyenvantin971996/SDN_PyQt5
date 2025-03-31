@@ -11,6 +11,7 @@ import subprocess
 import time
 import requests
 import re
+from ryu_controller.setting import K
 
 class Terminal(QMainWindow):
 
@@ -101,7 +102,7 @@ class DynamicMetric(QMainWindow):
         super().closeEvent(event)
 
     def showEvent(self, event):
-        self.tabs.setCurrentIndex(0)
+        self.tabs.setCurrentIndex(2)
         # self.metric_show = 'bw, delay'
 
     # def onTabChanged(self, index):
@@ -209,7 +210,20 @@ class MainWindow(QMainWindow):
 
     def initUI(self):
         self.font = QFont('Arial', 15)
-        self.colors = [Qt.red, Qt.green, Qt.blue, Qt.cyan, Qt.magenta]
+        self.colors = self.colors = [
+                                    Qt.red,
+                                    Qt.green,
+                                    Qt.blue,
+                                    Qt.cyan,
+                                    Qt.magenta,
+                                    Qt.yellow,
+                                    Qt.darkRed,
+                                    Qt.darkGreen,
+                                    Qt.darkBlue,
+                                    Qt.darkCyan,
+                                    Qt.darkMagenta,
+                                    Qt.darkYellow,
+                                    ]
         self.setFont(self.font)
         self.setWindowTitle("SDNLoadBalancer")
         self.setWindowIcon(QIcon("images/SDN.png"))
@@ -899,11 +913,11 @@ class MainWindow(QMainWindow):
                 except ValueError:
                     QMessageBox.warning(self, "Mininet", "Can not start Mininet!")
 
-                self.timer.timeout.connect(lambda: self.showMetric(self.dynamic_metric.table_widget_1, 'throughput'))
-                self.timer.timeout.connect(lambda: self.showMetric(self.dynamic_metric.table_widget_2, 'latency'))
+                # self.timer.timeout.connect(lambda: self.showMetric(self.dynamic_metric.table_widget_1, 'throughput'))
+                # self.timer.timeout.connect(lambda: self.showMetric(self.dynamic_metric.table_widget_2, 'latency'))
                 self.timer.timeout.connect(lambda: self.showMetric(self.dynamic_metric.table_widget_3, 'cost_2'))
                 
-                # self.timer.timeout.connect(self.showPaths)
+                self.timer.timeout.connect(self.showPaths)
                 update_interval = 2000
                 self.timer.start(update_interval)
     
@@ -945,8 +959,11 @@ class MainWindow(QMainWindow):
 
                             for key in range(len(pths[0])):
                                 # int_string = 'Path ' + str(key+1) + ': [' + ', '.join(map(str, pths[0][key])) + '], length = ' + str(pths[2][key]) + '\n'
-                                int_string = 'Path ' + str(key+1) + ': [' + ', '.join(map(str, pths[0][key])) + ']' + '\n'
+                                int_string = '\tPath ' + str(key+1) + ': [' + ', '.join(map(str, pths[0][key])) + ']' + '\n'
                                 terminal_string += int_string
+                                if (key+1)%K == 0 and len(pths[0]) > K and (key+1) != len(pths[0]):
+                                    terminal_string += '\n\tRerouting...\n'
+
                             if len(paths_dict) > 1:
                                 side = '\n'
                                 terminal_string += side
@@ -1758,7 +1775,13 @@ class MainWindow(QMainWindow):
                     qp.drawLine(QPoint(*perp_start), QPoint(*perp_end))
                     t = int(n/2)
                     for i in range(1, len(paths_lk)):
-                        qp.setPen(QPen(self.colors[paths_lk[i]], line_width))
+                        index = paths_lk[i]
+
+                        if index < 0 or index >= len(self.colors):
+                            random_color = QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+                            qp.setPen(QPen(random_color, line_width))
+                        else:
+                            qp.setPen(QPen(self.colors[index], line_width))
                         if i <= t:
                             perp_start = (int(start_pos[0] + perp_vector[0] * (distance*i + 1)), int(start_pos[1] + perp_vector[1] * (distance*i + 1)))
                             perp_end = (int(end_pos[0] + perp_vector[0] * (distance*i + 1)), int(end_pos[1] + perp_vector[1] * (distance*i + 1)))

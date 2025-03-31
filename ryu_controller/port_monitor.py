@@ -44,7 +44,7 @@ class PortMonitor(app_manager.RyuApp):
                     if lbi is not None and len(self.lbi_history) < LENGTH_LBI:
                         self.lbi_history.append(lbi)
                     if len(self.lbi_history) == LENGTH_LBI:
-                        self.save_lbi_history_to_json("result/DAMLB.json")
+                        self.save_lbi_history_to_json("result/DAMLB_new.json")
 
                 hub.sleep(PORT_PERIOD)
             except Exception as e:

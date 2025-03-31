@@ -1,11 +1,13 @@
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.models import load_model
+from decimal import Decimal
 
 edges = [[1, 2], [1, 5], [1, 8], [2, 3], [3, 4], [3, 8], [3, 9], [4, 10], [5, 6], [6, 7], [6, 8], [6, 9], [7, 10], [9, 10]]
 
 class RNN:
-    def __init__(self, model,  weight_map, src=1, dst=10, K=4):
-        self.model = model
+    def __init__(self, weight_map, src=1, dst=10, K=4):
+        self.model = load_model('model.h5', compile=False)
         self.weight_map = weight_map
         self.src = src
         self.dst = dst
@@ -73,4 +75,29 @@ class RNN:
                 paths_nodes.append([])
                 paths_lengths.append(0)
 
-        return paths_nodes, path_edges, paths_lengths
+        return paths_nodes, paths_lengths
+
+weight_map={
+	1:{2:None,5:None,8:None},
+	2:{1:None,3:None},
+	3:{2:None,4:None,8:None,9:None},
+	4:{3:None,10:None},
+	5:{1:None,6:None},
+	6:{5:None,7:None,8:None,9:None},
+	7:{6:None,10:None},
+	8:{1:None,3:None,6:None},
+	9:{3:None,6:None,10:None},
+	10:{4:None,7:None,9:None}
+}
+values = [0.0,0.1]
+for node_1 in weight_map.keys():
+    for node_2 in weight_map[node_1].keys():
+        if weight_map[node_2][node_1] != None:
+            weight_map[node_1][node_2] = weight_map[node_2][node_1]
+        else:
+            r = np.random.choice(values)
+            weight_map[node_1][node_2] = Decimal(str(r))
+
+alg = RNN(weight_map, 1, 10, 4)
+paths_nodes, paths_weights = alg.compute_shortest_paths()
+print(paths_nodes)
